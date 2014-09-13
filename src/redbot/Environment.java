@@ -22,10 +22,21 @@ public class Environment {
     Set<Link> pendingLinks = new HashSet<Link>();
     HashMap<String,Link> allLinks = new HashMap<String,Link>();
     Set<String> mails = new HashSet<>();
-    
+    private boolean Debug;
+    private int maxDepth;
+    private String nombreArchivoPozos;
+    private String nombreArchivoMultilang;
+    private int cantThreads;
+    private String proxyURL;
+ 
     
     private Environment() {
-        
+        Debug = false;
+        maxDepth = -1;
+        nombreArchivoMultilang = null;
+        nombreArchivoPozos = null;
+        cantThreads = 1;
+        proxyURL = null;
     }
 
     public static Environment getInstance() {
@@ -87,7 +98,7 @@ public class Environment {
         mails.add(mail);
     }
     
-    private boolean persistent = true;
+    private boolean persistent = false;
 
     public boolean isPersistent() {
         return persistent;
@@ -97,6 +108,52 @@ public class Environment {
         this.persistent = persistent;
     }
     
+    public void setDebug(boolean debug){
+        this.Debug=debug;
+    }
     
+    public boolean getDebug(){
+        return this.Debug;
+    }
     
+    public void setMaxDepth(int maxDepth) {
+        this.maxDepth = maxDepth;
+    }
+
+    public int getMaxDepth() {
+        return maxDepth;
+    }
+
+    public String getNombreArchivoPozos() {
+        return nombreArchivoPozos;
+    }
+
+    public void setNombreArchivoPozos(String nombreArchivoPozos) {
+        this.nombreArchivoPozos = nombreArchivoPozos;
+    }
+
+    public String getNombreArchivoMultilang() {
+        return nombreArchivoMultilang;
+    }
+
+    public void setNombreArchivoMultilang(String nombreArchivoMultilang) {
+        this.nombreArchivoMultilang = nombreArchivoMultilang;
+    }
+
+    public int getCantThreads() {
+        return cantThreads;
+    }
+
+    public void setCantThreads(int cantThreads) {
+        this.cantThreads = cantThreads;
+    }
+
+    public String getProxyURL() {
+        return proxyURL;
+    }
+
+    public void setProxyURL(String proxyURL) {
+        this.proxyURL = proxyURL;
+    }
+       
 }

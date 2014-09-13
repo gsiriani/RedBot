@@ -215,8 +215,13 @@ public class HTTPSocket {
             String u = (body.substring(m.start(0),m.end(0)));
             try {
                 URL url = new URL(u);
-                Link l = new Link(url.getHost(), url.getFile(), 80, currentLink.getTtl()- 1);
-                Environment.getInstance().addLink(l);
+                int ttl = currentLink.getTtl();
+                if (ttl != -1) ttl = ttl-1;
+                if (ttl != 0)
+                {
+                   Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                   Environment.getInstance().addLink(l);   
+                }                
             } catch (MalformedURLException e) {
                 
             }
