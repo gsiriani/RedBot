@@ -1,6 +1,5 @@
 package redbot;
 
-import com.sun.xml.internal.ws.api.message.Packet;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
