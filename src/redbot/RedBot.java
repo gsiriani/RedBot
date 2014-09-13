@@ -101,7 +101,7 @@ public class RedBot {
                                  if (i < args.length) {
                                      try {
                                         int n = Integer.valueOf(args[i]);
-                                        Environment.getInstance().setCantThreads(n);
+                                        Environment.getInstance().setMaxCantThreads(n);
                                         i++;
                                         if (i == args.length) {
                                             System.out.println("Error de sintaxis para p no URL");

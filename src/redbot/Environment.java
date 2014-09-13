@@ -26,7 +26,7 @@ public class Environment {
     private int maxDepth;
     private String nombreArchivoPozos;
     private String nombreArchivoMultilang;
-    private int cantThreads;
+    private int maxCantThreads;
     private String proxyURL;
  
     
@@ -35,7 +35,7 @@ public class Environment {
         maxDepth = -1;
         nombreArchivoMultilang = null;
         nombreArchivoPozos = null;
-        cantThreads = 1;
+        maxCantThreads = 1;
         proxyURL = null;
     }
 
@@ -140,12 +140,12 @@ public class Environment {
         this.nombreArchivoMultilang = nombreArchivoMultilang;
     }
 
-    public int getCantThreads() {
-        return cantThreads;
+    public int getMaxCantThreads() {
+        return maxCantThreads;
     }
 
-    public void setCantThreads(int cantThreads) {
-        this.cantThreads = cantThreads;
+    public void setMaxCantThreads(int maxCantThreads) {
+        this.maxCantThreads = maxCantThreads;
     }
 
     public String getProxyURL() {
@@ -155,5 +155,6 @@ public class Environment {
     public void setProxyURL(String proxyURL) {
         this.proxyURL = proxyURL;
     }
+
        
 }
