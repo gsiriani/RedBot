@@ -56,6 +56,7 @@ public class HTTPSocket {
        currentLink = link;
        String strProtocol;
        
+       // Compruebo persistencia
        if(Environment.getInstance().isPersistent() && isPersistent()) {
            strProtocol = "HTTP/1.1";
            persistent = true;
