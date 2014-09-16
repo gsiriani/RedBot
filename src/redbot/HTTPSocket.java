@@ -12,6 +12,9 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -206,8 +209,10 @@ public class HTTPSocket {
     }
     private void extractUrls(String body){
          //TODO: Links relativos
+                
+        boolean esPozo = true;
         
-        List<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<>();
         String urlPattern = "((http|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
         Pattern p = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(body);
@@ -216,6 +221,7 @@ public class HTTPSocket {
             String u = (body.substring(m.start(0),m.end(0)));
             try {
                 URL url = new URL(u);
+                esPozo = false;
                 int ttl = currentLink.getTtl();
                 if (ttl != -1) ttl = ttl-1;
                 if (ttl != 0)
@@ -225,9 +231,18 @@ public class HTTPSocket {
                 }                
             } catch (MalformedURLException e) {
                 
+            }        
+            
+        }
+        if(esPozo && !Environment.getInstance().getNombreArchivoPozos().isEmpty())
+        {
+            try {
+                Path pathPozos = Environment.getInstance().getPathPozos();
+                byte[] urlActual = this.currentLink.getURL().getBytes();
+                Files.write(pathPozos, urlActual, StandardOpenOption.APPEND);
+            } catch (IOException ex) {
+                Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
-            
         }
     }
     

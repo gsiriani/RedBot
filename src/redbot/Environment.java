@@ -41,10 +41,10 @@ public class Environment {
     private Environment() {
         Debug = false;
         maxDepth = -1;
-        nombreArchivoMultilang = null;
-        nombreArchivoPozos = null;
+        nombreArchivoMultilang = "";
+        nombreArchivoPozos = "";
         maxCantThreads = 1;
-        proxyURL = null;
+        proxyURL = "";
     }
 
     public static Environment getInstance() {
