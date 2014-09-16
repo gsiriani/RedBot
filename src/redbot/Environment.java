@@ -6,6 +6,8 @@
 
 package redbot;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -25,7 +27,9 @@ public class Environment {
     private boolean Debug;
     private int maxDepth;
     private String nombreArchivoPozos;
+    private Path pathPozos;
     private String nombreArchivoMultilang;
+    private Path pathMultilang;
     private int maxCantThreads;
     private String proxyURL;
  
@@ -130,6 +134,7 @@ public class Environment {
 
     public void setNombreArchivoPozos(String nombreArchivoPozos) {
         this.nombreArchivoPozos = nombreArchivoPozos;
+        pathPozos = Paths.get(nombreArchivoPozos);
     }
 
     public String getNombreArchivoMultilang() {
@@ -138,6 +143,7 @@ public class Environment {
 
     public void setNombreArchivoMultilang(String nombreArchivoMultilang) {
         this.nombreArchivoMultilang = nombreArchivoMultilang;
+        pathMultilang = Paths.get(nombreArchivoMultilang);
     }
 
     public int getMaxCantThreads() {
@@ -156,5 +162,12 @@ public class Environment {
         this.proxyURL = proxyURL;
     }
 
+    public Path getPathPozos() {
+        return pathPozos;
+    }
+
+    public Path getPathMultilang() {
+        return pathMultilang;
+    }
        
 }
