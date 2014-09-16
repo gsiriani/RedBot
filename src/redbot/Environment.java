@@ -6,6 +6,10 @@
 
 package redbot;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -135,6 +139,17 @@ public class Environment {
     public void setNombreArchivoPozos(String nombreArchivoPozos) {
         this.nombreArchivoPozos = nombreArchivoPozos;
         pathPozos = Paths.get(nombreArchivoPozos);
+        // Creo el archivo
+        try {
+            // Create the empty file with default permissions, etc.
+            Files.createFile(pathPozos);
+        } catch (FileAlreadyExistsException x) {
+            System.err.format("file named %s" +
+                " already exists%n", pathPozos);
+        } catch (IOException x) {
+            // Some other sort of failure, such as permissions.
+            System.err.format("createFile error: %s%n", x);
+        }
     }
 
     public String getNombreArchivoMultilang() {
@@ -144,6 +159,17 @@ public class Environment {
     public void setNombreArchivoMultilang(String nombreArchivoMultilang) {
         this.nombreArchivoMultilang = nombreArchivoMultilang;
         pathMultilang = Paths.get(nombreArchivoMultilang);
+        // Creo el archivo
+        try {
+            // Create the empty file with default permissions, etc.
+            Files.createFile(pathMultilang);
+        } catch (FileAlreadyExistsException x) {
+            System.err.format("file named %s" +
+                " already exists%n", pathMultilang);
+        } catch (IOException x) {
+            // Some other sort of failure, such as permissions.
+            System.err.format("createFile error: %s%n", x);
+        }
     }
 
     public int getMaxCantThreads() {
@@ -169,5 +195,5 @@ public class Environment {
     public Path getPathMultilang() {
         return pathMultilang;
     }
-       
+         
 }
