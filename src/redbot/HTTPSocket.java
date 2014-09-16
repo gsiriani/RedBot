@@ -1,21 +1,18 @@
 package redbot;
 
-import com.sun.xml.internal.ws.api.message.Packet;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
-import java.net.Proxy;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -34,7 +31,7 @@ public class HTTPSocket {
     private String host = null;
     private int port = 80;
   
-    private HashMap<String, String> headers = new HashMap<String, String>();   
+    private HashMap<String, String> headers = new HashMap<>();   
     private String body;
     
     private HTTPProtocol protocol;
@@ -181,19 +178,32 @@ public class HTTPSocket {
         
         while(currentLine < lines.length && !lines[currentLine].isEmpty()){
             int firstColon = lines[currentLine].indexOf(":");
-            String value = lines[currentLine].substring(0, firstColon).trim();
-            String key =  lines[currentLine].substring(firstColon + 1).trim();
-            headers.put(value, key);
+            String key = lines[currentLine].substring(0, firstColon).trim();
+            String value =  lines[currentLine].substring(firstColon + 1).trim();
+            headers.put(key, value);
             currentLine++;
         }
         
+        for(Entry entrada : headers.entrySet())
+        {
+            System.out.print(entrada.getKey());
+            System.out.print(":");
+            System.out.print(entrada.getValue());
+            System.out.println();            
+        }
+        if(headers.containsKey("Content-Type") && (!(headers.get("Content-Type").contains("text/html"))))
+        {
+            //TODO : agregar a pozos
+            return;
+        }
+
         currentLine++;
-        
+
         StringBuilder sb = new StringBuilder();
-        
+
         for( ; currentLine < lines.length ; currentLine++)
             sb.append(lines[currentLine]);
-        
+
         body = sb.toString();
         ParseBody(getBody());
         
