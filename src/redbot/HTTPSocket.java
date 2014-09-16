@@ -62,9 +62,15 @@ public class HTTPSocket {
            persistent = false;
        }
        
+       //Pregunto por multilang
+       String pidoMultilang = "";
+       //if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
+        pidoMultilang = "Accept-Language: en, es, ca, cs, da, de, nl, el, "
+            + "eu, fi, fr, he, hr, hu, it, ja, ko, no, pl, pt, ru, sv, tr, uk, zh";
+       
        //TODO: Si path tiene espacios falla
        String request = "GET " + link.getPath() + " " + strProtocol + 
-               "\nHost: " + link.getHost() + "\n\n";
+               "\nHost: " + link.getHost() + pidoMultilang + "\n\n";
        
        if(    !link.getHost().equals(getHost())  // Esto si hay que cambiar socket
            || link.getPort() != getPort()) 
@@ -184,13 +190,10 @@ public class HTTPSocket {
             currentLine++;
         }
         
-        for(Entry entrada : headers.entrySet())
-        {
-            System.out.print(entrada.getKey());
-            System.out.print(":");
-            System.out.print(entrada.getValue());
-            System.out.println();            
-        }
+        /* for(Entry entrada : headers.entrySet())
+            System.out.println(entrada.getKey() + ":" + entrada.getValue()); */
+        
+        // Filtro los que no son text/html
         if(headers.containsKey("Content-Type") && (!(headers.get("Content-Type").contains("text/html"))))
         {
             //TODO : agregar a pozos
