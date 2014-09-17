@@ -114,7 +114,7 @@ public class HTTPSocket {
         
         //Pregunto por multilang
         String pidoMultilang = "";
-//        if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
+        if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
             consultarMultilang();
        
         if(!isPersistent()) {
@@ -179,9 +179,7 @@ public class HTTPSocket {
         message = firstLineItems[2]; // TODO: Capturar mensaje completo
         
         int currentLine = 1;
-        
-        String[] lineContent;
-        
+                
         while(currentLine < lines.length && !lines[currentLine].isEmpty()){
             int firstColon = lines[currentLine].indexOf(":");
             String key = lines[currentLine].substring(0, firstColon).trim();
@@ -194,7 +192,8 @@ public class HTTPSocket {
             System.out.println(entrada.getKey() + ":" + entrada.getValue()); */
         
         // Filtro los que no son text/html
-        if(headers.containsKey("Content-Type") && (!(headers.get("Content-Type").contains("text/html"))))
+        // TODO : Estoy filtrando mas de lo necesario
+        if(!(headers.containsKey("Content-Type") && (headers.get("Content-Type").contains("text/html"))))
         {
             if(!Environment.getInstance().getNombreArchivoPozos().isEmpty())
             {
