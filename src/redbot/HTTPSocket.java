@@ -4,20 +4,19 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
-import java.net.Proxy;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.sql.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -36,7 +35,7 @@ public class HTTPSocket {
     private String host = null;
     private int port = 80;
   
-    private HashMap<String, String> headers = new HashMap<String, String>();   
+    private HashMap<String, String> headers = new HashMap<>();   
     private String body;
     
     private HTTPProtocol protocol;
@@ -67,6 +66,7 @@ public class HTTPSocket {
            strProtocol = "HTTP/1.0";
            persistent = false;
        }
+       
        
        //TODO: Si path tiene espacios falla
        String request = "GET " + link.getPath() + " " + strProtocol + 
@@ -111,11 +111,11 @@ public class HTTPSocket {
         } catch (Exception e) {
             System.err.println("Error en: " + link.getURL());
         }
-       
-       
         
-        
-
+        //Pregunto por multilang
+        String pidoMultilang = "";
+//        if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
+            consultarMultilang();
        
         if(!isPersistent()) {
            try {
@@ -184,19 +184,29 @@ public class HTTPSocket {
         
         while(currentLine < lines.length && !lines[currentLine].isEmpty()){
             int firstColon = lines[currentLine].indexOf(":");
-            String value = lines[currentLine].substring(0, firstColon).trim();
-            String key =  lines[currentLine].substring(firstColon + 1).trim();
-            headers.put(value, key);
+            String key = lines[currentLine].substring(0, firstColon).trim();
+            String value =  lines[currentLine].substring(firstColon + 1).trim();
+            headers.put(key, value);
             currentLine++;
         }
         
+        /* for(Entry entrada : headers.entrySet())
+            System.out.println(entrada.getKey() + ":" + entrada.getValue()); */
+        
+        // Filtro los que no son text/html
+        if(headers.containsKey("Content-Type") && (!(headers.get("Content-Type").contains("text/html"))))
+        {
+            //TODO : agregar a pozos
+            return;
+        }
+
         currentLine++;
-        
+
         StringBuilder sb = new StringBuilder();
-        
+
         for( ; currentLine < lines.length ; currentLine++)
             sb.append(lines[currentLine]);
-        
+
         body = sb.toString();
         ParseBody(getBody());
         
@@ -243,6 +253,78 @@ public class HTTPSocket {
             } catch (IOException ex) {
                 Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
             }
+        }
+    }
+    
+    private void consultarMultilang(){
+        String[] lenguajes = {"en", "es", "ca", "cs", "da", "de", "nl", "el",
+            "eu", "fi", "fr", "he", "hr", "hu", "it", "ja", "ko", "no", "pl", 
+            "pt", "ru", "sv", "tr", "uk", "zh"}; 
+        Link link = currentLink;
+        int contador = 0;
+        int pos = 0;
+        
+        while(pos < lenguajes.length && contador < 2)
+        {
+            String lenguaje = lenguajes[pos];
+            String solicitudLenguaje = "\nAccept-Language:" + lenguaje;
+            //TODO: Si path tiene espacios falla
+            String request = "GET " + link.getPath() + " HTTP/1.0" + 
+               "\nHost: " + link.getHost() + solicitudLenguaje + "\n\n";
+
+            if( !link.getHost().equals(getHost())  // Esto si hay que cambiar socket
+                || link.getPort() != getPort()) 
+            {
+                 host = link.getHost(); // Actualizo los datos
+                 port = link.getPort();
+                 socket = new Socket();
+            }
+
+            if (socket.isClosed() || !socket.isConnected()) { // Si hay que conectar
+                 InetSocketAddress adress = new InetSocketAddress(getHost(),getPort());
+                 try {
+                     socket = new Socket();
+                     socket.connect(adress, CONNECTION_TIMEOUT);
+                     System.err.println("Conectado!!!!");
+                     out = new PrintWriter(socket.getOutputStream(),true);
+                     in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                 } catch (UnknownHostException ex) {
+                     System.out.println("Host " + getHost() + " desconocido");
+                 } catch (IOException ex) {
+                     System.out.println("Error: " + ex.getMessage());
+                 }    
+            }
+
+            out.print(request); // Mandamos la request
+            out.flush();
+
+            String response = getResponse(in); 
+             
+            String[] lines = response.split("\\r?\\n");
+
+            int currentLine = 1;
+            String key, value;
+            value = "";
+            boolean encontro = false;
+            while(currentLine < lines.length && !lines[currentLine].isEmpty() && !encontro){
+                int firstColon = lines[currentLine].indexOf(":");
+                key = lines[currentLine].substring(0, firstColon).trim();
+                if(key.equals("Content-Language"))
+                {
+                    value =  lines[currentLine].substring(firstColon + 1).trim();
+                    encontro = true;
+                }
+                currentLine++;
+            }
+            if(value.contains(lenguaje))
+            {
+                contador = contador + 1;
+            }
+            pos++;
+        }
+        if(contador == 2)
+        {
+            //TODO: agregar link a archivo de multilang
         }
     }
     
