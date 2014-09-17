@@ -196,7 +196,16 @@ public class HTTPSocket {
         // Filtro los que no son text/html
         if(headers.containsKey("Content-Type") && (!(headers.get("Content-Type").contains("text/html"))))
         {
-            //TODO : agregar a pozos
+            if(!Environment.getInstance().getNombreArchivoPozos().isEmpty())
+            {
+                try {
+                    Path pathPozos = Environment.getInstance().getPathPozos();
+                    byte[] urlActual = this.currentLink.getURL().getBytes();
+                    Files.write(pathPozos, urlActual, StandardOpenOption.APPEND);
+                } catch (IOException ex) {
+                    Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
             return;
         }
 
@@ -324,7 +333,16 @@ public class HTTPSocket {
         }
         if(contador == 2)
         {
-            //TODO: agregar link a archivo de multilang
+            if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
+            {
+                try {
+                    Path pathMultilang = Environment.getInstance().getPathMultilang();
+                    byte[] urlActual = this.currentLink.getURL().getBytes();
+                    Files.write(pathMultilang, urlActual, StandardOpenOption.APPEND);
+                } catch (IOException ex) {
+                    Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
         }
     }
     
