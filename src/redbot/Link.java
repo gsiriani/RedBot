@@ -61,8 +61,12 @@ public class Link {
         return ttl;
     }
     
-    public String getURL() {
+    public String getLowerURL() {
         return (getHost() + getPath()).toLowerCase();
+    }
+    
+    public String getURL() {
+        return ("http://" + getHost() + getPath());
     }
     
     

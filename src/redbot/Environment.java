@@ -37,6 +37,7 @@ public class Environment {
     private Path pathMultilang;
     private int maxCantThreads;
     private String proxyURL;
+    private int proxyPort = 3128;
     
     
     private Environment() {
@@ -57,7 +58,7 @@ public class Environment {
     }
     
     public void addPozo(Link link) {
-        pozos.add(link.getURL());
+        pozos.add(link.getLowerURL());
     }
 
     public Set<Link> getLinks() {
@@ -71,9 +72,9 @@ public class Environment {
     public void addLink(Link link) {
         
         
-        if(!allLinks.containsKey(link.getURL())) {
+        if(!allLinks.containsKey(link.getLowerURL())) {
             pendingLinks.add(link);    
-            allLinks.put(link.getURL(), link);
+            allLinks.put(link.getLowerURL(), link);
         }
         
     }
@@ -141,6 +142,16 @@ public class Environment {
         return nombreArchivoPozos;
     }
 
+    public int getProxyPort() {
+        return proxyPort;
+    }
+
+    public void setProxyPort(int proxyPort) {
+        this.proxyPort = proxyPort;
+    }
+    
+    
+    
     public void setNombreArchivoPozos(String nombreArchivoPozos) {
         this.nombreArchivoPozos = nombreArchivoPozos;
         pathPozos = Paths.get(nombreArchivoPozos);

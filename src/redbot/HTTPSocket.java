@@ -30,7 +30,7 @@ public class HTTPSocket {
     
     private final  int CONNECTION_TIMEOUT = 1000;
     
-    private boolean persistent = false; // Por defecto asumimos persistencia en
+    private boolean persistent = true; // Por defecto asumimos persistencia en
                                        // el host
     private String host = null;
     private int port = 80;
@@ -58,20 +58,27 @@ public class HTTPSocket {
        
        currentLink = link;
        String strProtocol;
+       String keepAlive;
        
        // Compruebo persistencia
        if(Environment.getInstance().isPersistent() && isPersistent()) {
            strProtocol = "HTTP/1.1";
            persistent = true;
+           keepAlive = "\nConnection: Keep-Alive";
        } else {
            strProtocol = "HTTP/1.0";
            persistent = false;
+           keepAlive = ""; 
+
        }
        
        
        //TODO: Si path tiene espacios falla
-       String request = "GET " + link.getPath() + " " + strProtocol + 
-               "\nHost: " + link.getHost() + "\n\n";
+       String request = "GET " + link.getURL()+ " " + strProtocol + 
+               "\nHost: " + link.getHost() +
+               keepAlive +
+               "\nAccept-Charset: utf-8" +
+               "\n\n";
        
        if(    !link.getHost().equals(getHost())  // Esto si hay que cambiar socket
            || link.getPort() != getPort()) 
@@ -86,21 +93,29 @@ public class HTTPSocket {
        
        if (socket.isClosed() || !socket.isConnected()) { // Si hay que conectar
             
-            InetSocketAddress adress = new InetSocketAddress(getHost(),getPort());
+            InetSocketAddress adress = getSocketAdress();
+           
+            
             
             try {
                 System.err.println("Reconectado, protocolo:" + strProtocol);
                 socket = new Socket();
                 socket.connect(adress, CONNECTION_TIMEOUT);
                 System.err.println("Conectado!!!!");
-                out = new PrintWriter(socket.getOutputStream(),true);
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             } catch (UnknownHostException ex) {
                 throw new NoParseLinkException("Host " + getHost() + " desconocido");
             } catch (IOException ex) {
                 throw new NoParseLinkException(ex.getMessage());
             }    
         }
+       
+        try {
+            out = new PrintWriter(socket.getOutputStream(),true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        } catch (IOException ex) {
+            throw new NoParseLinkException(ex.getMessage());
+        }
+        
         
         out.print(request); // Mandamos la request
         out.flush();
@@ -136,8 +151,11 @@ public class HTTPSocket {
             
             
             /* LEO PRIMERA LINEA */
-            
+
             String firstLine = in.readLine();
+            
+            if(firstLine == null)
+                throw new NoParseLinkException("Primera Linea Null");
             
             String[] firstLineItems = firstLine.split("\\s");
 
@@ -194,8 +212,16 @@ public class HTTPSocket {
                 sb.append(line);
             }
             
-            body = sb.toString();
+            int c;
             
+            while ((c = in.read()) != -1) {
+                sb.append( (char)c ) ;  
+            }
+            
+            in.close();
+            
+            body = sb.toString();
+                       
             ParseBody(body);
                         
         } catch (IOException ex) {
@@ -266,7 +292,7 @@ public class HTTPSocket {
         {
             try {
                 Path pathPozos = Environment.getInstance().getPathPozos();
-                byte[] urlActual = this.currentLink.getURL().getBytes();
+                byte[] urlActual = this.currentLink.getLowerURL().getBytes();
                 Files.write(pathPozos, urlActual, StandardOpenOption.APPEND);
             } catch (IOException ex) {
                 Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
@@ -299,7 +325,7 @@ public class HTTPSocket {
             }
 
             if (socket.isClosed() || !socket.isConnected()) { // Si hay que conectar
-                 InetSocketAddress adress = new InetSocketAddress(getHost(),getPort());
+                 InetSocketAddress adress = getSocketAdress();
                  try {
                      socket = new Socket();
                      socket.connect(adress, CONNECTION_TIMEOUT);
@@ -315,7 +341,8 @@ public class HTTPSocket {
 
             out.print(request); // Mandamos la request
             out.flush();
-
+            out.close();
+            
             String response = getResponse(in); 
              
             String[] lines = response.split("\\r?\\n");
@@ -346,7 +373,7 @@ public class HTTPSocket {
             {
                 try {
                     Path pathMultilang = Environment.getInstance().getPathMultilang();
-                    byte[] urlActual = this.currentLink.getURL().getBytes();
+                    byte[] urlActual = this.currentLink.getLowerURL().getBytes();
                     Files.write(pathMultilang, urlActual, StandardOpenOption.APPEND);
                 } catch (IOException ex) {
                     Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
@@ -387,12 +414,18 @@ public class HTTPSocket {
     public HashMap<String, String> getHeaders() {
         return headers;
     }
-    
 
-
-    
-    
-    
-    
-    
+    private InetSocketAddress getSocketAdress() {
+            
+            if(!Environment.getInstance().getProxyURL().isEmpty())
+            {
+                return new InetSocketAddress(
+                        Environment.getInstance().getProxyURL(),
+                        Environment.getInstance().getProxyPort());    
+            } else {
+                return new InetSocketAddress(getHost(),getPort());    
+            }
+           
+    }
+  
 }
