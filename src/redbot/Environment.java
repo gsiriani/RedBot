@@ -28,6 +28,7 @@ public class Environment {
     Set<Link> pendingLinks = new HashSet<Link>();
     HashMap<String,Link> allLinks = new HashMap<String,Link>();
     Set<String> mails = new HashSet<>();
+    Set<String> pozos = new HashSet<>();
     private boolean Debug;
     private int maxDepth;
     private String nombreArchivoPozos;
@@ -36,7 +37,7 @@ public class Environment {
     private Path pathMultilang;
     private int maxCantThreads;
     private String proxyURL;
- 
+    
     
     private Environment() {
         Debug = false;
@@ -53,6 +54,10 @@ public class Environment {
             _instance = new Environment();
         
         return _instance;
+    }
+    
+    public void addPozo(Link link) {
+        pozos.add(link.getURL());
     }
 
     public Set<Link> getLinks() {

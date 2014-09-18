@@ -28,9 +28,9 @@ public class HTTPSocket {
     PrintWriter out;
     BufferedReader in;
     
-    private final  int CONNECTION_TIMEOUT = 100000;
+    private final  int CONNECTION_TIMEOUT = 1000;
     
-    private boolean persistent = true; // Por defecto asumimos persistencia en
+    private boolean persistent = false; // Por defecto asumimos persistencia en
                                        // el host
     private String host = null;
     private int port = 80;
@@ -42,6 +42,7 @@ public class HTTPSocket {
     private boolean isOK;
     private int code;
     private String message;
+    private long contentLength = 0;
     
     private Link currentLink = null;
     
@@ -95,9 +96,9 @@ public class HTTPSocket {
                 out = new PrintWriter(socket.getOutputStream(),true);
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             } catch (UnknownHostException ex) {
-                System.out.println("Host " + getHost() + " desconocido");
+                throw new NoParseLinkException("Host " + getHost() + " desconocido");
             } catch (IOException ex) {
-                System.out.println("Error: " + ex.getMessage());
+                throw new NoParseLinkException(ex.getMessage());
             }    
         }
         
@@ -106,18 +107,14 @@ public class HTTPSocket {
        
         String response = getResponse(in); 
         
-        try {
-            parseResponse(response);               
-        } catch (Exception e) {
-            System.err.println("Error en: " + link.getURL());
-        }
         
         //Pregunto por multilang
-        String pidoMultilang = "";
+        /*String pidoMultilang = "";
         if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
             consultarMultilang();
-       
-        if(!isPersistent()) {
+       */
+        
+        if(!isPersistent() || !Environment.getInstance().isPersistent()) {
            try {
                System.err.println("Desconectado por no ser persistente!");
                socket.close();
@@ -136,12 +133,73 @@ public class HTTPSocket {
         String line;
                 
         try {
-            while ((line = in.readLine()) != null) {
-                //System.out.println(line);
-                builder.append(line + "\n");
+            
+            
+            /* LEO PRIMERA LINEA */
+            
+            String firstLine = in.readLine();
+            
+            String[] firstLineItems = firstLine.split("\\s");
+
+            // TODO: Resolver si no soporta el protocolo de pedido
+            if ("HTTP/1.0".equals(firstLineItems[0])) {
+                protocol = HTTPProtocol.HTTP10;
+                persistent = false;
+            } else if ("HTTP/1.1".equals(firstLineItems[0])) {
+                protocol = HTTPProtocol.HTTP11;
+                persistent = true;
+            } else {
+                protocol = HTTPProtocol.UNKNOWN;
+                persistent = false;
             }
+            
+            try {
+                code = Integer.valueOf(firstLineItems[1]);
+            } catch (NumberFormatException ex) {
+                code = -1;
+                isOK = false;
+                throw new NoParseLinkException("Respuesta inválida!");
+            }
+
+            isOK = code == 200;
+
+            message = firstLineItems[2]; // TODO: Capturar mensaje completo
+
+            /* LEO CABEZALES */
+                       
+            while (true) {
+                line = in.readLine();
+                
+                if(line == null)
+                    continue;
+                else if(line.isEmpty())
+                    break;
+                        
+                int firstColon = line.indexOf(":");
+                String value = line.substring(0, firstColon).trim();
+                String key =  line.substring(firstColon + 1).trim();
+                headers.put(value, key);
+                
+            }
+            
+            try {
+                analyzeHeaders();    
+            } catch (NoParseLinkException ex) {
+                System.err.println(ex.getMessage());
+            }
+            
+            StringBuilder sb = new StringBuilder();
+            
+            while ((line = in.readLine()) != null) {
+                sb.append(line);
+            }
+            
+            body = sb.toString();
+            
+            ParseBody(body);
+                        
         } catch (IOException ex) {
-            System.out.println("Error: " + ex.getMessage());
+            throw new NoParseLinkException(ex.getMessage());
         }
         
         
@@ -151,75 +209,27 @@ public class HTTPSocket {
         return response;
                 
         
-    }
+    }            
+
     
-    private void parseResponse(String response) {
-        String[] lines = response.split("\\r?\\n");
-        
-        String firstLine = lines[0];
-        
-        String[] firstLineItems = firstLine.split("\\s");
-        
-        // TODO: Resolver si no soporta el protocolo de pedido
-        if ("HTTP/1.0".equals(firstLineItems[0])) {
-            protocol = HTTPProtocol.HTTP10;
-            persistent = false;
-        } else if ("HTTP/1.1".equals(firstLineItems[0])) {
-            protocol = HTTPProtocol.HTTP11;
-            persistent = true;
-        } else {
-            protocol = HTTPProtocol.UNKNOWN;
-            persistent = false;
-        }
-        
-        code = Integer.valueOf(firstLineItems[1]);
-        
-        isOK = code == 200;
-        
-        message = firstLineItems[2]; // TODO: Capturar mensaje completo
-        
-        int currentLine = 1;
-                
-        while(currentLine < lines.length && !lines[currentLine].isEmpty()){
-            int firstColon = lines[currentLine].indexOf(":");
-            String key = lines[currentLine].substring(0, firstColon).trim();
-            String value =  lines[currentLine].substring(firstColon + 1).trim();
-            headers.put(key, value);
-            currentLine++;
-        }
-        
-        /* for(Entry entrada : headers.entrySet())
-            System.out.println(entrada.getKey() + ":" + entrada.getValue()); */
-        
-        // Filtro los que no son text/html
+    private void analyzeHeaders() {
+    
         // TODO : Estoy filtrando mas de lo necesario
         if(!(headers.containsKey("Content-Type") && (headers.get("Content-Type").contains("text/html"))))
         {
-            if(!Environment.getInstance().getNombreArchivoPozos().isEmpty())
-            {
-                try {
-                    Path pathPozos = Environment.getInstance().getPathPozos();
-                    byte[] urlActual = this.currentLink.getURL().getBytes();
-                    Files.write(pathPozos, urlActual, StandardOpenOption.APPEND);
-                } catch (IOException ex) {
-                    Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-            return;
+           Environment.getInstance().addPozo(currentLink); 
+           throw new NoParseLinkException("El archivo no es una página");
         }
 
-        currentLine++;
-
-        StringBuilder sb = new StringBuilder();
-
-        for( ; currentLine < lines.length ; currentLine++)
-            sb.append(lines[currentLine]);
-
-        body = sb.toString();
-        ParseBody(getBody());
+        if(!headers.containsKey("Content-Length"))
+        {
+          //  throw new NoParseLinkException("La respuesta no especifica un tamaño de contenido");
+        } else {
+            contentLength = Long.parseLong(headers.get("Content-Length"));
+        }
         
     }
-    
+        
     public void ParseBody(String body) {
         
         extractUrls(body);
@@ -297,9 +307,9 @@ public class HTTPSocket {
                      out = new PrintWriter(socket.getOutputStream(),true);
                      in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                  } catch (UnknownHostException ex) {
-                     System.out.println("Host " + getHost() + " desconocido");
+                     throw new NoParseLinkException("Host " + getHost() + " desconocido");
                  } catch (IOException ex) {
-                     System.out.println("Error: " + ex.getMessage());
+                     throw new NoParseLinkException(ex.getMessage());
                  }    
             }
 
