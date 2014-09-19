@@ -1,6 +1,8 @@
 package redbot;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -26,7 +28,7 @@ public class HTTPSocket {
     
     private Socket socket;
     PrintWriter out;
-    BufferedReader in;
+    DataInputStream in;
     
     private final  int CONNECTION_TIMEOUT = 1000;
     
@@ -42,7 +44,8 @@ public class HTTPSocket {
     private boolean isOK;
     private int code;
     private String message;
-    private long contentLength = 0;
+    private int contentLength = -1;
+    private String transferEncoding = "";
     
     private Link currentLink = null;
     
@@ -111,7 +114,7 @@ public class HTTPSocket {
        
         try {
             out = new PrintWriter(socket.getOutputStream(),true);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
         } catch (IOException ex) {
             throw new NoParseLinkException(ex.getMessage());
         }
@@ -120,7 +123,7 @@ public class HTTPSocket {
         out.print(request); // Mandamos la request
         out.flush();
        
-        String response = getResponse(in); 
+        getResponse(in); 
         
         
         //Pregunto por multilang
@@ -142,11 +145,11 @@ public class HTTPSocket {
     }
 
     
-    private String getResponse(BufferedReader in) {
+    private String getResponse(DataInputStream in) {
 
         StringBuilder builder = new StringBuilder();
         String line;
-                
+                       
         try {
             
             
@@ -208,19 +211,25 @@ public class HTTPSocket {
             
             StringBuilder sb = new StringBuilder();
             
-            while ((line = in.readLine()) != null) {
-                sb.append(line);
+            
+            
+            if(contentLength != -1)
+            {
+                byte[] content = new byte[contentLength];
+                int readed = 0;
+                while(readed < contentLength)
+                {
+                    int read = in.read(content,readed,contentLength - readed);
+                    readed += read;
+                }
+                body = new String(content,"UTF-8");
+            } else {
+                throw new RuntimeException("No se que hacer!");
             }
             
-            int c;
+            //in.close();
             
-            while ((c = in.read()) != -1) {
-                sb.append( (char)c ) ;  
-            }
-            
-            in.close();
-            
-            body = sb.toString();
+            //body = sb.toString();
                        
             ParseBody(body);
                         
@@ -251,7 +260,14 @@ public class HTTPSocket {
         {
           //  throw new NoParseLinkException("La respuesta no especifica un tamaño de contenido");
         } else {
-            contentLength = Long.parseLong(headers.get("Content-Length"));
+            contentLength = Integer.parseInt(headers.get("Content-Length"));
+        }
+        
+        if(!headers.containsKey("Transfer-Encoding"))
+        {
+          //  throw new NoParseLinkException("La respuesta no especifica un tamaño de contenido");
+        } else {
+            transferEncoding = headers.get("Transfer-Encoding");
         }
         
     }
@@ -300,7 +316,7 @@ public class HTTPSocket {
         }
     }
     
-    private void consultarMultilang(){
+ /*   private void consultarMultilang(){
         String[] lenguajes = {"en", "es", "ca", "cs", "da", "de", "nl", "el",
             "eu", "fi", "fr", "he", "hr", "hu", "it", "ja", "ko", "no", "pl", 
             "pt", "ru", "sv", "tr", "uk", "zh"}; 
@@ -380,7 +396,7 @@ public class HTTPSocket {
                 }
             }
         }
-    }
+    }*/
     
     public String getHost() {
         return host;
