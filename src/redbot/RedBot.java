@@ -157,14 +157,16 @@ public class RedBot {
         { 
             
             Link link = Environment.getInstance().getLink();
+            System.out.println("***NUEVO LINK: " + link.getLowerURL() + " TTL: " + link.getTtl());
             try {
                 //if(link.getURL().contains("fing.edu.uy")) {
-                    System.out.println("NUEVO LINK: " + link.getLowerURL() + " TTL: " + link.getTtl());
                     socket.queryURL(link);
+                    
                 //}    
             } catch (NoParseLinkException ex) {
                 System.err.println(ex.getMessage());
             }
+            System.out.println("***FIN LINK");
             
             
         }
