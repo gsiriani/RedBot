@@ -302,10 +302,11 @@ public class HTTPSocket {
         
     public void ParseBody(String body) {
         
-        extractUrlsAbsolutas(body);
-        extractUrlsRelativas(body);
+        boolean tieneAbsolutas = extractUrlsAbsolutas(body);
+        boolean tieneReativas = extractUrlsRelativas(body);
         extractMails(body);
         // Corroboro si es pozo
+        esPozo = !tieneAbsolutas && !tieneReativas;
         if(esPozo && !Environment.getInstance().getNombreArchivoPozos().isEmpty())
         {
             Environment.getInstance().pedirPozosAvailable();
@@ -315,12 +316,14 @@ public class HTTPSocket {
         
     }
     
-    private void extractUrlsAbsolutas(String body){       
+    private boolean extractUrlsAbsolutas(String body){     
+        boolean encontro = false;
         String urlPattern = "((http|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
         Pattern p = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(body);
         
         while (m.find()) {
+            encontro = true;
             String u = (body.substring(m.start(0),m.end(0)));
             try {
                 URL url = new URL(u);
@@ -340,24 +343,26 @@ public class HTTPSocket {
             }        
             
         }
+        return encontro;
     }
     
-    private void extractUrlsRelativas(String body){   
+    private boolean extractUrlsRelativas(String body){   
         // TODO : este pattern es un penal, CHEQUEAR
+        boolean encontro = false;
         String relativeUrlPattern = "(href=\"[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*\")";
         Pattern p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(body);
         
         while (m.find()) {
+            encontro = true;
             String encontrado = (body.substring(m.start(0),m.end(0)));
-            String pathCurrentLink = currentLink.getPath();
-            String [] cortarPath = pathCurrentLink.split("/");
-            String aaa = currentLink.getLowerURL();
-            String u = "http://" + currentLink.getHost() + "/" + cortarPath[1] + "/" + encontrado.substring(6, encontrado.length()-1);
+            String currentLinkURL = currentLink.getURL();
+            String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
+            String u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
             try {
                 URL url = new URL(u);
                 System.out.println("Encontre el link " + u);
-                // TODO : estoy seguro de que no es pozo?
+                // TODO : estoy seguro de que no es pozo? NO
                 esPozo = false;
                 int ttl = currentLink.getTtl();
                 if (ttl != -1) ttl = ttl-1;
@@ -372,6 +377,7 @@ public class HTTPSocket {
                 System.out.println(e);
             }
         }
+        return encontro;
     }
     
     /*private void extractUrlsRelativas(String body){   
