@@ -189,6 +189,26 @@ public class RedBot {
         if(!Environment.getInstance().getNombreArchivoMultilang().equals("")){
             Environment.getInstance().escribirArchivoMultilang();
         }
+        
+        
+        
+        
+      /* String relativeUrlPattern = "(href=\"[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*\")";
+        Pattern p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher("href=\"manu/viola.html\"");
+        
+        while (m.find()) {
+            String encontrado = ("href=\"manu/viola.html\"".substring(m.start(0),m.end(0)));
+            String u = "http://www.fing.edu.uy/" + encontrado.substring(6, encontrado.length()-1);
+            try {
+                URL url = new URL(u);
+                System.out.println("Encontre el link " + u);                
+            } catch (MalformedURLException e) {
+                
+            }
+        }*/
+        
+        
     }
     
 }

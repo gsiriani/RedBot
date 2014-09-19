@@ -246,7 +246,7 @@ public class HTTPSocket {
                             readed += read;
                         }
 
-                        sb.append(new String(content,"UTF-8"));               
+                        sb.append(new String(content,"UTF-8"));  
 
                     }
 
@@ -344,6 +344,38 @@ public class HTTPSocket {
     
     private void extractUrlsRelativas(String body){   
         // TODO : este pattern es un penal, CHEQUEAR
+        String relativeUrlPattern = "(href=\"[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*\")";
+        Pattern p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(body);
+        
+        while (m.find()) {
+            String encontrado = (body.substring(m.start(0),m.end(0)));
+            String pathCurrentLink = currentLink.getPath();
+            String [] cortarPath = pathCurrentLink.split("/");
+            String aaa = currentLink.getLowerURL();
+            String u = "http://" + currentLink.getHost() + "/" + cortarPath[1] + "/" + encontrado.substring(6, encontrado.length()-1);
+            try {
+                URL url = new URL(u);
+                System.out.println("Encontre el link " + u);
+                // TODO : estoy seguro de que no es pozo?
+                esPozo = false;
+                int ttl = currentLink.getTtl();
+                if (ttl != -1) ttl = ttl-1;
+                if (ttl != 0)
+                {
+                   Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                   Environment.getInstance().pedirLinksAvailable();
+                   Environment.getInstance().addLink(l);   
+                   Environment.getInstance().retornarLinksAvailable();
+                }                
+            } catch (MalformedURLException e) {
+                System.out.println(e);
+            }
+        }
+    }
+    
+    /*private void extractUrlsRelativas(String body){   
+        // TODO : este pattern es un penal, CHEQUEAR
         String relativeUrlPattern = "([\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]+)";
         Pattern p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(body);
@@ -368,7 +400,7 @@ public class HTTPSocket {
                 
             }
         }
-    }
+    }*/
     
     private void extractMails(String body){
         String mailPattern = "[_A-Za-z0-9-\\\\+]+(\\\\.[_A-Za-z0-9-]+)*"
