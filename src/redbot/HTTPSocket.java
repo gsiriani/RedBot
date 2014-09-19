@@ -39,6 +39,7 @@ public class HTTPSocket {
   
     private HashMap<String, String> headers = new HashMap<>();   
     private String body;
+    private boolean esPozo;
     
     private HTTPProtocol protocol;
     private boolean isOK;
@@ -50,6 +51,7 @@ public class HTTPSocket {
     private Link currentLink = null;
     
     public HTTPSocket() {
+        this.esPozo = true;
         socket = new Socket();
     }
         
@@ -122,7 +124,6 @@ public class HTTPSocket {
        
         getResponse(in); 
         
-        
         //Pregunto por multilang
         /*String pidoMultilang = "";
         if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
@@ -136,8 +137,7 @@ public class HTTPSocket {
            } catch (IOException ex) {
                Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
            }
-        }
-        
+        }       
         
     }
 
@@ -146,11 +146,8 @@ public class HTTPSocket {
 
         StringBuilder builder = new StringBuilder();
         String line;
-        headers = new HashMap<>();
                        
         try {
-            
-            
             /* LEO PRIMERA LINEA */
 
             String firstLine = in.readLine();
@@ -198,7 +195,6 @@ public class HTTPSocket {
                 String value = line.substring(0, firstColon).trim();
                 String key =  line.substring(firstColon + 1).trim();
                 headers.put(value, key);
-                
             }
             
             try {
@@ -271,24 +267,13 @@ public class HTTPSocket {
                 body = sb.toString();
                 
             }
-            
-            //in.close();
-            
-            
-                       
+            //in.close();   
             ParseBody(body);
-                        
         } catch (IOException ex) {
             throw new NoParseLinkException(ex.getMessage());
         }
-        
-        
         String response = builder.toString();
-        
-       
         return response;
-                
-        
     }            
 
     
@@ -303,17 +288,13 @@ public class HTTPSocket {
            throw new NoParseLinkException("El archivo no es una página");
         }
 
-        if(!headers.containsKey("Content-Length"))
+        if(headers.containsKey("Content-Length"))
         {
-          //  throw new NoParseLinkException("La respuesta no especifica un tamaño de contenido");
-        } else {
             contentLength = Integer.parseInt(headers.get("Content-Length"));
         }
         
-        if(!headers.containsKey("Transfer-Encoding"))
+        if(headers.containsKey("Transfer-Encoding"))
         {
-          //  throw new NoParseLinkException("La respuesta no especifica un tamaño de contenido");
-        } else {
             transferEncoding = headers.get("Transfer-Encoding");
         }
         
@@ -321,15 +302,20 @@ public class HTTPSocket {
         
     public void ParseBody(String body) {
         
-        extractUrls(body);
+        extractUrlsAbsolutas(body);
+        extractUrlsRelativas(body);
+        extractMails(body);
+        // Corroboro si es pozo
+        if(esPozo && !Environment.getInstance().getNombreArchivoPozos().isEmpty())
+        {
+            Environment.getInstance().pedirPozosAvailable();
+            Environment.getInstance().addPozo(this.currentLink.getLowerURL());
+            Environment.getInstance().retornarPozosAvailable();     
+        }
         
     }
-    private void extractUrls(String body){
-         //TODO: Links relativos
-                
-        boolean esPozo = true;
-        
-        List<String> result = new ArrayList<>();
+    
+    private void extractUrlsAbsolutas(String body){       
         String urlPattern = "((http|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
         Pattern p = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(body);
@@ -338,6 +324,7 @@ public class HTTPSocket {
             String u = (body.substring(m.start(0),m.end(0)));
             try {
                 URL url = new URL(u);
+                System.out.println("Encontre el link " + u);
                 esPozo = false;
                 int ttl = currentLink.getTtl();
                 if (ttl != -1) ttl = ttl-1;
@@ -353,12 +340,47 @@ public class HTTPSocket {
             }        
             
         }
-        if(esPozo && !Environment.getInstance().getNombreArchivoPozos().isEmpty())
-        {
-            Environment.getInstance().pedirPozosAvailable();
-            Environment.getInstance().addPozo(this.currentLink.getLowerURL());
-            Environment.getInstance().retornarPozosAvailable();     
+    }
+    
+    private void extractUrlsRelativas(String body){   
+        // TODO : este pattern es un penal, CHEQUEAR
+        String relativeUrlPattern = "([\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]+)";
+        Pattern p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(body);
+        
+        while (m.find()) {
+            String u = currentLink.getLowerURL() + (body.substring(m.start(0),m.end(0)));
+            try {
+                URL url = new URL(u);
+                System.out.println("Encontre el link " + u);
+                // TODO : estoy seguro de que no es pozo?
+                esPozo = false;
+                int ttl = currentLink.getTtl();
+                if (ttl != -1) ttl = ttl-1;
+                if (ttl != 0)
+                {
+                   Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                   Environment.getInstance().pedirLinksAvailable();
+                   Environment.getInstance().addLink(l);   
+                   Environment.getInstance().retornarLinksAvailable();
+                }                
+            } catch (MalformedURLException e) {
+                
+            }
         }
+    }
+    
+    private void extractMails(String body){
+        String mailPattern = "[_A-Za-z0-9-\\\\+]+(\\\\.[_A-Za-z0-9-]+)*"
+                + "@[A-Za-z0-9-]+(\\\\.[A-Za-z0-9]+)*(\\\\.[A-Za-z]{2,})";
+        Pattern p = Pattern.compile(mailPattern,Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(body);        
+        while (m.find()) {
+            String mail = (body.substring(m.start(0),m.end(0)));
+            Environment.getInstance().pedirMailsAvailable();
+            Environment.getInstance().addMail(mail);
+            Environment.getInstance().retornarMailsAvailable();
+        }       
     }
     
 //    private void consultarMultilang(){
@@ -438,6 +460,8 @@ public class HTTPSocket {
 //            }
 //        }
 //    }
+    
+    
     
     public String getHost() {
         return host;
