@@ -141,9 +141,11 @@ public class RedBot {
                             //TODO : que pasa si el puerto no es 80?
                             int ttl = Environment.getInstance().getMaxDepth();
                             Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                            Environment.getInstance().pedirLinksAvailable();
                             Environment.getInstance().addLink(l);
+                            Environment.getInstance().retornarLinksAvailable();
                         } catch (MalformedURLException e) {
-
+                                throw new NoParseLinkException(e);
                         }
                         i++;
                     }     
@@ -153,10 +155,11 @@ public class RedBot {
        
         HTTPSocket socket = new HTTPSocket();
         
-        while(!Environment.getInstance().pendingLinks.isEmpty())
+        while(!Environment.getInstance().isEmptyPendingLinks())
         { 
-            
+            Environment.getInstance().pedirLinksAvailable();
             Link link = Environment.getInstance().getLink();
+            Environment.getInstance().retornarLinksAvailable();
             try {
                 //if(link.getURL().contains("fing.edu.uy")) {
                     System.out.println("NUEVO LINK: " + link.getLowerURL() + " TTL: " + link.getTtl());
@@ -169,7 +172,7 @@ public class RedBot {
             
         }
         
-        System.out.println(Environment.getInstance().allLinks.toString());
+        System.out.println(Environment.getInstance().getAllLinks().toString());
     }
     
 }

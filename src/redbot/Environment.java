@@ -16,6 +16,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -25,10 +28,14 @@ public class Environment {
     
     private static Environment _instance = null;
 
-    Set<Link> pendingLinks = new HashSet<Link>();
-    HashMap<String,Link> allLinks = new HashMap<String,Link>();
-    Set<String> mails = new HashSet<>();
-    Set<String> pozos = new HashSet<>();
+    private Set<Link> pendingLinks = new HashSet<>();
+    private Semaphore linksAvailable;
+    private HashMap<String,Link> allLinks = new HashMap<>();
+    private Set<String> mails = new HashSet<>();
+    private Set<String> pozos = new HashSet<>();
+    private Semaphore pozosAvailable;
+    private Set<String> multilang = new HashSet<>();
+    private Semaphore multilangAvailable;
     private boolean Debug;
     private int maxDepth;
     private String nombreArchivoPozos;
@@ -42,6 +49,7 @@ public class Environment {
     
     private Environment() {
         Debug = false;
+        linksAvailable = new Semaphore(1);
         maxDepth = -1;
         nombreArchivoMultilang = "";
         nombreArchivoPozos = "";
@@ -56,19 +64,7 @@ public class Environment {
         
         return _instance;
     }
-    
-    public void addPozo(Link link) {
-        pozos.add(link.getLowerURL());
-    }
 
-    public Set<Link> getLinks() {
-        return pendingLinks;
-    }
-
-    public void setLinks(Set<Link> links) {
-        this.pendingLinks = links;
-    }
-    
     public void addLink(Link link) {
         
         
@@ -210,6 +206,58 @@ public class Environment {
 
     public Path getPathMultilang() {
         return pathMultilang;
+    }   
+
+    public void pedirLinksAvailable() {
+        try {
+            linksAvailable.acquire();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
-         
+    
+    public void retornarLinksAvailable(){
+        linksAvailable.release();
+    }
+    
+    public void pedirPozosAvailable(){
+        try {
+            pozosAvailable.acquire();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void retornarPozosAvailable(){
+        pozosAvailable.release();
+    }
+    
+    public void addPozo(String urlPozo){
+        pozos.add(urlPozo);
+    }
+    
+    public void pedirMultilangAvailable(){
+        try {
+            multilangAvailable.acquire();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void retornarMultilangAvailable(){
+        multilangAvailable.release();
+    }
+    
+    public void addMultilang(String urlMultilang){
+        multilang.add(urlMultilang);
+    }
+
+    public HashMap<String, Link> getAllLinks() {
+        return allLinks;
+    }
+    
+    public boolean isEmptyPendingLinks(){
+        return pendingLinks.isEmpty();
+    }
+    
 }
