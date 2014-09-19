@@ -15,9 +15,11 @@ public class redbotThread implements Runnable{
     @Override
     public void run() {
         HTTPSocket socket = new HTTPSocket();        
-        while(!Environment.getInstance().pendingLinks.isEmpty())
-        {             
+        while(!Environment.getInstance().isEmptyPendingLinks())
+        {       
+            Environment.getInstance().pedirLinksAvailable();
             Link link = Environment.getInstance().getLink();
+            Environment.getInstance().retornarLinksAvailable();
             socket.queryURL(link);
             
         }
