@@ -176,11 +176,11 @@ public class RedBot {
         
         System.out.println(Environment.getInstance().getAllLinks().toString());
         
-        if(!Environment.getInstance().getPathPozos().equals("")){
+        if(!Environment.getInstance().getNombreArchivoPozos().equals("")){
             Environment.getInstance().escribirArchivoPozos();
         }
         
-        if(!Environment.getInstance().getPathMultilang().equals("")){
+        if(!Environment.getInstance().getNombreArchivoMultilang().equals("")){
             Environment.getInstance().escribirArchivoMultilang();
         }
     }
