@@ -149,6 +149,7 @@ public class HTTPSocket {
 
         StringBuilder builder = new StringBuilder();
         String line;
+        headers = new HashMap<>();
                        
         try {
             

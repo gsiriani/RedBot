@@ -12,6 +12,7 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -32,9 +33,10 @@ public class Environment {
     private Semaphore linksAvailable;
     private HashMap<String,Link> allLinks = new HashMap<>();
     private Set<String> mails = new HashSet<>();
-    private Set<String> pozos = new HashSet<>();
+    private Semaphore mailsAvailable;
+    private Set<String> pozos;
     private Semaphore pozosAvailable;
-    private Set<String> multilang = new HashSet<>();
+    private Set<String> multilang;
     private Semaphore multilangAvailable;
     private boolean Debug;
     private int maxDepth;
@@ -45,11 +47,15 @@ public class Environment {
     private int maxCantThreads;
     private String proxyURL;
     private int proxyPort = 3128;
+    private boolean persistent = false;
     
     
     private Environment() {
         Debug = false;
         linksAvailable = new Semaphore(1);
+        mailsAvailable = new Semaphore(1);
+        pozosAvailable = new Semaphore(1);
+        multilangAvailable = new Semaphore(1);
         maxDepth = -1;
         nombreArchivoMultilang = "";
         nombreArchivoPozos = "";
@@ -107,8 +113,6 @@ public class Environment {
     public void addMail(String mail) {
         mails.add(mail);
     }
-    
-    private boolean persistent = false;
 
     public boolean isPersistent() {
         return persistent;
@@ -151,6 +155,7 @@ public class Environment {
     public void setNombreArchivoPozos(String nombreArchivoPozos) {
         this.nombreArchivoPozos = nombreArchivoPozos;
         pathPozos = Paths.get(nombreArchivoPozos);
+        pozos = new HashSet<>();
         // Creo el archivo
         try {
             // Create the empty file with default permissions, etc.
@@ -171,6 +176,7 @@ public class Environment {
     public void setNombreArchivoMultilang(String nombreArchivoMultilang) {
         this.nombreArchivoMultilang = nombreArchivoMultilang;
         pathMultilang = Paths.get(nombreArchivoMultilang);
+        multilang = new HashSet<>();
         // Creo el archivo
         try {
             // Create the empty file with default permissions, etc.
@@ -212,7 +218,7 @@ public class Environment {
         try {
             linksAvailable.acquire();
         } catch (InterruptedException ex) {
-            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
+            throw new NoParseLinkException(ex);
         }
     }
     
@@ -224,7 +230,7 @@ public class Environment {
         try {
             pozosAvailable.acquire();
         } catch (InterruptedException ex) {
-            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
+             throw new NoParseLinkException(ex);
         }
     }
     
@@ -240,7 +246,7 @@ public class Environment {
         try {
             multilangAvailable.acquire();
         } catch (InterruptedException ex) {
-            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
+            throw new NoParseLinkException(ex);
         }
     }
     
@@ -260,4 +266,45 @@ public class Environment {
         return pendingLinks.isEmpty();
     }
     
+    public void pedirMailsAvailable(){
+        try {
+            mailsAvailable.acquire();
+        } catch (InterruptedException ex) {
+            throw new NoParseLinkException(ex);
+        }
+    }
+    
+    public void retornarMailsAvailable(){
+        mailsAvailable.release();
+    }
+    
+    public void escribirArchivoPozos(){ 
+        try {
+            Iterator it = pozos.iterator();
+            String URLPozo;
+            byte [] linea;
+            while (it.hasNext()) {
+                URLPozo = (String) it.next()+"\n";
+                linea = URLPozo.getBytes();
+                Files.write(pathPozos, linea, StandardOpenOption.APPEND);
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
+        }   
+    }
+   
+    public void escribirArchivoMultilang(){ 
+        try {
+            Iterator it = multilang.iterator();
+            String URLMultilang;
+            byte [] linea;
+            while (it.hasNext()) {
+                URLMultilang = (String) it.next()+"\n";
+                linea = URLMultilang.getBytes();
+                Files.write(pathMultilang, linea, StandardOpenOption.APPEND);
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
+        }   
+    }
 }
