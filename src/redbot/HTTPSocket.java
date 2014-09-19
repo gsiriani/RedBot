@@ -356,25 +356,28 @@ public class HTTPSocket {
         while (m.find()) {
             encontro = true;
             String encontrado = (body.substring(m.start(0),m.end(0)));
-            String currentLinkURL = currentLink.getURL();
-            String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
-            String u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
-            try {
-                URL url = new URL(u);
-                System.out.println("Encontre el link " + u);
-                // TODO : estoy seguro de que no es pozo? NO
-                esPozo = false;
-                int ttl = currentLink.getTtl();
-                if (ttl != -1) ttl = ttl-1;
-                if (ttl != 0)
-                {
-                   Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
-                   Environment.getInstance().pedirLinksAvailable();
-                   Environment.getInstance().addLink(l);   
-                   Environment.getInstance().retornarLinksAvailable();
-                }                
-            } catch (MalformedURLException e) {
-                System.out.println(e);
+            String aaa = encontrado.substring(6, 9);
+            if (!encontrado.substring(6, 10).equals("http") && !encontrado.substring(6, 9).equals("www")){
+                String currentLinkURL = currentLink.getURL();
+                String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
+                String u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
+                try {
+                    URL url = new URL(u);
+                    System.out.println("Encontre el link " + u);
+                    // TODO : estoy seguro de que no es pozo? NO
+                    esPozo = false;
+                    int ttl = currentLink.getTtl();
+                    if (ttl != -1) ttl = ttl-1;
+                    if (ttl != 0)
+                    {
+                       Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                       Environment.getInstance().pedirLinksAvailable();
+                       Environment.getInstance().addLink(l);   
+                       Environment.getInstance().retornarLinksAvailable();
+                    }                
+                } catch (MalformedURLException e) {
+                    System.out.println(e);
+                }
             }
         }
         return encontro;
