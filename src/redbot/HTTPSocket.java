@@ -30,7 +30,7 @@ public class HTTPSocket {
     PrintWriter out;
     DataInputStream in;
     
-    private final  int CONNECTION_TIMEOUT = 1000;
+    private final  int CONNECTION_TIMEOUT = 100000;
     
     private boolean persistent = true; // Por defecto asumimos persistencia en
                                        // el host
@@ -89,7 +89,6 @@ public class HTTPSocket {
       
             host = link.getHost(); // Actualizo los datos
             port = link.getPort();
-         
             socket = new Socket();
         
        }
@@ -97,11 +96,9 @@ public class HTTPSocket {
        if (socket.isClosed() || !socket.isConnected()) { // Si hay que conectar
             
             InetSocketAddress adress = getSocketAdress();
-           
-            
             
             try {
-                System.err.println("Reconectado, protocolo:" + strProtocol);
+                System.err.println("Protocolo:" + strProtocol);
                 socket = new Socket();
                 socket.connect(adress, CONNECTION_TIMEOUT);
                 System.err.println("Conectado!!!!");
@@ -209,27 +206,74 @@ public class HTTPSocket {
                 System.err.println(ex.getMessage());
             }
             
-            StringBuilder sb = new StringBuilder();
-            
-            
-            
-            if(contentLength != -1)
-            {
-                byte[] content = new byte[contentLength];
-                int readed = 0;
-                while(readed < contentLength)
+            if(protocol == HTTPProtocol.HTTP11) {
+                if(contentLength != -1)
                 {
-                    int read = in.read(content,readed,contentLength - readed);
-                    readed += read;
+                    byte[] content = new byte[contentLength];
+                    int readed = 0;
+                    while(readed < contentLength)
+                    {
+                        int read = in.read(content,readed,contentLength - readed);
+                        readed += read;
+                    }
+                    body = new String(content,"UTF-8");
+                } else { // CHUNKED
+                    StringBuilder sb = new StringBuilder();
+                    boolean terminado = false;
+
+                    while(!terminado) {
+
+                        String l;
+
+                        while("".equals(l= in.readLine())){}
+
+                        int index;
+
+                        if ((index = l.indexOf(';')) != -1)
+                        {
+                            l = l.substring(0,index);
+                        }
+
+                        int size = Integer.decode("0x"+l);
+
+                        if(size == 0) {
+                            terminado = true;
+                            l = in.readLine();
+                        }   
+
+                        byte[] content = new byte[size];
+                        int readed = 0;
+                        while(readed < size)
+                        {
+                            int read = in.read(content,readed,size - readed);
+                            readed += read;
+                        }
+
+                        sb.append(new String(content,"UTF-8"));               
+
+                    }
+
+                    body = sb.toString();
+
                 }
-                body = new String(content,"UTF-8");
             } else {
-                throw new RuntimeException("No se que hacer!");
+
+                StringBuilder sb = new StringBuilder();
+                
+                int b;
+
+                while((b = in.read()) != -1) {
+                    
+                    sb.append((char)b);
+                }
+                
+                body = sb.toString();
+                
             }
             
             //in.close();
             
-            //body = sb.toString();
+            
                        
             ParseBody(body);
                         
