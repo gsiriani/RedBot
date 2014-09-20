@@ -6,6 +6,8 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.Socket;
@@ -50,8 +52,7 @@ public class HTTPSocket {
     private int noReconnections = 0;
     
     public HTTPSocket() {
-        socket = new Socket();
-        
+        socket = new Socket();      
     }
         
     public boolean isPersistent() {
@@ -73,7 +74,7 @@ public class HTTPSocket {
        } else {
            strProtocol = "HTTP/1.0";
            persistent = false;
-           keepAlive = ""; 
+           keepAlive = "\nConnection: close"; 
 
        }
        
@@ -193,7 +194,29 @@ public class HTTPSocket {
         try {
             /* LEO PRIMERA LINEA */
 
-            String firstLine = in.readLine();
+            String firstLine = null;
+            
+            int retry = 10;
+            while (retry > 0) {
+                if(in.available() > 0)
+                {
+                    firstLine = in.readLine();
+                    break;
+                }
+                retry--;
+                try {
+                    System.err.println("Tiempo de espera agotado. Quedan " + retry + " intentos");
+                    Thread.sleep(1500);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+            
+            if (retry == 0) {
+                   throw new LinkFailed("El servidor para '" + currentLink.getURL() + "' demora mucho en responder.");
+            }
+            
+            
             
             if(firstLine == null)
                 throw new LinkFailed("Primera Linea Null");
@@ -250,10 +273,10 @@ public class HTTPSocket {
                 
                 int b;
 
-                while(socket.isClosed() || !socket.isConnected()) {
-                    b = in.read();
+                while((b = in.read()) != -1 && !socket.isClosed()) {
                     sb.append((char)b);
                 }
+               
                 
                 body = sb.toString();
             } else if(contentLength != -1)
@@ -336,7 +359,7 @@ public class HTTPSocket {
             }
            socket = new Socket();
            
-           throw new NoParseLinkException("El archivo no es una página");
+           throw new NoParseLinkException("El link '" + currentLink.getURL() +  "' no es una página");
            
         }
 
@@ -371,7 +394,7 @@ public class HTTPSocket {
     
     private boolean extractUrlsAbsolutas(String body){     
         boolean encontro = false;
-        String urlPattern = "((http|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
+        String urlPattern = "((http):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
         Pattern p = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(body);
         int i = 0;
@@ -444,21 +467,11 @@ public class HTTPSocket {
     }
     
     private void extractMails(String body){
-        String mailPattern = "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+"
-                + "(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:"
-                + "[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23"
-                + "-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c"
-                + "\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*"
-                + "[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
-                + "|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
-                + "\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|"
-                + "[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x"
-                + "0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x0"
-                + "9\\x0b\\x0c\\x0e-\\x7f])+)\\])";
-        Pattern p = Pattern.compile(mailPattern,Pattern.CASE_INSENSITIVE);
+        String mailPattern = "(\\\\w+)(\\\\.\\\\w+)*@(\\\\w+\\\\.)(\\\\w+)(\\\\.\\\\w+)*";
+        Pattern p = Pattern.compile(mailPattern);
         Matcher m = p.matcher(body);        
         while (m.find()) {
-            String mail = (body.substring(m.start(0),m.end(0)));
+            String mail = m.group();
             Environment.getInstance().pedirMailsAvailable();
             Environment.getInstance().addMail(mail);
             Environment.getInstance().retornarMailsAvailable();
