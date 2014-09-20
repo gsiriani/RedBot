@@ -15,7 +15,7 @@ public class RedBot {
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) {
+    public synchronized static void main(String[] args) {
         int i = 0;
         boolean error = false;
         while ((i < args.length) && !error ) {
@@ -151,13 +151,14 @@ public class RedBot {
             }
         } // cierra while      
   
-        
         Environment.getInstance().iniciarHilos();
         try {
             Environment.getInstance().wait();
         } catch (InterruptedException ex) {
             Logger.getLogger(RedBot.class.getName()).log(Level.SEVERE, null, ex);
         }
+
+
         
 //        HTTPSocket socket = new HTTPSocket();
 //        
