@@ -30,7 +30,7 @@ public class HTTPSocket {
     PrintWriter out;
     DataInputStream in;
     
-    private final  int CONNECTION_TIMEOUT = 100000;
+    private final  int CONNECTION_TIMEOUT = 5000;
     
     private boolean persistent = true; // Por defecto asumimos persistencia en
                                        // el host
@@ -47,12 +47,13 @@ public class HTTPSocket {
     private String message;
     private int contentLength = -1;
     private String transferEncoding = "";
-    
     private Link currentLink = null;
+    private int noReconnections = 0;
     
     public HTTPSocket() {
         this.esPozo = true;
         socket = new Socket();
+        
     }
         
     public boolean isPersistent() {
@@ -60,8 +61,9 @@ public class HTTPSocket {
     }
 
     public void queryURL(Link link) {
-       
+       // TODO: arreglar pozos
        currentLink = link;
+       
        String strProtocol;
        String keepAlive;
        
@@ -85,7 +87,7 @@ public class HTTPSocket {
                "\nAccept-Charset: utf-8" +
                "\n\n";
        
-       if(    !link.getHost().equals(getHost())  // Esto si hay que cambiar socket
+       if(!link.getHost().equals(getHost())  // Esto si hay que cambiar socket
            || link.getPort() != getPort()) 
        {
       
@@ -95,35 +97,39 @@ public class HTTPSocket {
         
        }
        
-       if (socket.isClosed() || !socket.isConnected()) { // Si hay que conectar
+       int retry_attempts = 1;
+       boolean retry = true;
+       while(retry) 
+       {
+           connectIfNecessary();
+           retry = false;
+           sendRequest(request);
+           try {
+               
+               getResponse(in); 
+               
+           } catch (LinkFailed e) {
+               
+               System.err.println("Error: " + e.getMessage() +".\nReintentando.");
+               retry = true;
+               
+               try {
+                   socket.close();
+                   socket = new Socket();
+               } catch (IOException ex) {
+                   Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
+               }
+               
+               retry_attempts--;
+               
+               if(retry_attempts < 0)
+               {
+                   throw new NoParseLinkException("Demasiados intentos. Se considera incorrecto el link");
+               }
+               
+           }
             
-            InetSocketAddress adress = getSocketAdress();
-            
-            try {
-                System.err.println("Protocolo:" + strProtocol);
-                socket = new Socket();
-                socket.connect(adress, CONNECTION_TIMEOUT);
-                System.err.println("Conectado!!!!");
-            } catch (UnknownHostException ex) {
-                throw new NoParseLinkException("Host " + getHost() + " desconocido");
-            } catch (IOException ex) {
-                throw new NoParseLinkException(ex.getMessage());
-            }    
-        }
-       
-        try {
-            out = new PrintWriter(socket.getOutputStream(),true);
-            in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-        } catch (IOException ex) {
-            throw new NoParseLinkException(ex.getMessage());
-        }
-        
-        
-        out.print(request); // Mandamos la request
-        out.flush();
-       
-        getResponse(in); 
-        
+       }
         //Pregunto por multilang
         /*String pidoMultilang = "";
         if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
@@ -140,6 +146,45 @@ public class HTTPSocket {
         }       
         
     }
+    
+    private void connectIfNecessary() {
+        
+        transferEncoding = "";
+        contentLength = -1;
+
+        headers = new HashMap<>();
+        
+        if (socket.isClosed() || !socket.isConnected()) { // Si hay que conectar
+
+            InetSocketAddress adress = getSocketAdress();
+            
+            try {
+                socket = new Socket();
+                socket.connect(adress, CONNECTION_TIMEOUT);
+                System.err.println("Conectado!!!!");
+                
+                try {
+                    out = new PrintWriter(socket.getOutputStream(),true);
+                    in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
+                } catch (IOException ex) {
+                    throw new NoParseLinkException(ex.getMessage());
+                }
+            } catch (UnknownHostException ex) {
+                throw new NoParseLinkException("Host " + getHost() + " desconocido");
+            } catch (IOException ex) {
+                throw new NoParseLinkException(ex.getMessage());
+            }    
+            
+            
+        } 
+    }
+    
+    private void sendRequest(String request){
+        
+       connectIfNecessary();
+        out.print(request); // Mandamos la request
+        out.flush();
+    }
 
     
     private String getResponse(DataInputStream in) {
@@ -153,7 +198,7 @@ public class HTTPSocket {
             String firstLine = in.readLine();
             
             if(firstLine == null)
-                throw new NoParseLinkException("Primera Linea Null");
+                throw new LinkFailed("Primera Linea Null");
             
             String[] firstLineItems = firstLine.split("\\s");
 
@@ -171,10 +216,8 @@ public class HTTPSocket {
             
             try {
                 code = Integer.valueOf(firstLineItems[1]);
-            } catch (NumberFormatException ex) {
-                code = -1;
-                isOK = false;
-                throw new NoParseLinkException("Respuesta inválida!");
+            } catch (Exception ex) {
+                throw new LinkFailed("Respuesta inválida. La linea era: " +firstLine);
             }
 
             isOK = code == 200;
@@ -197,75 +240,80 @@ public class HTTPSocket {
                 headers.put(value, key);
             }
             
-            try {
-                analyzeHeaders();    
-            } catch (NoParseLinkException ex) {
-                System.err.println(ex.getMessage());
-            }
+            analyzeHeaders();    
             
-            if(protocol == HTTPProtocol.HTTP11) {
-                if(contentLength != -1)
+            System.out.println("te = " + transferEncoding);
+            System.out.println("cl = " + contentLength);
+            
+            if(contentLength != -1)
+            {
+                byte[] content = new byte[contentLength];
+                int readed = 0;
+                while(readed < contentLength)
                 {
-                    byte[] content = new byte[contentLength];
-                    int readed = 0;
-                    while(readed < contentLength)
+                    int read = in.read(content,readed,contentLength - readed);
+                    readed += read;
+                }
+                body = new String(content,"UTF-8");
+            } else if (transferEncoding.toLowerCase().equals("chunked")){
+                StringBuilder sb = new StringBuilder();
+                boolean terminado = false;
+
+                while(!terminado) {
+
+                    String l;
+
+                    while("".equals(l= in.readLine())){}
+
+                    int index;
+
+                    if ((index = l.indexOf(';')) != -1)
                     {
-                        int read = in.read(content,readed,contentLength - readed);
+                        l = l.substring(0,index);
+                    }
+
+                    int size;
+
+                    try {
+                         size = Integer.decode("0x"+l);
+                    } catch (NumberFormatException ex) {
+                        throw new LinkFailed("Linea hex inválida, leí:" + l);
+                    }
+
+                    if(size == 0) {
+                        terminado = true;
+                        l = in.readLine();
+                    }   
+
+                    byte[] content = new byte[size];
+                    int readed = 0;
+                    while(readed < size)
+                    {
+                        int read = in.read(content,readed,size - readed);
                         readed += read;
                     }
-                    body = new String(content,"UTF-8");
-                } else { // CHUNKED
-                    StringBuilder sb = new StringBuilder();
-                    boolean terminado = false;
 
-                    while(!terminado) {
-
-                        String l;
-
-                        while("".equals(l= in.readLine())){}
-
-                        int index;
-
-                        if ((index = l.indexOf(';')) != -1)
-                        {
-                            l = l.substring(0,index);
-                        }
-
-                        int size = Integer.decode("0x"+l);
-
-                        if(size == 0) {
-                            terminado = true;
-                            l = in.readLine();
-                        }   
-
-                        byte[] content = new byte[size];
-                        int readed = 0;
-                        while(readed < size)
-                        {
-                            int read = in.read(content,readed,size - readed);
-                            readed += read;
-                        }
-
-                        sb.append(new String(content,"UTF-8"));  
-
-                    }
-
-                    body = sb.toString();
+                    sb.append(new String(content,"UTF-8"));  
 
                 }
-            } else {
+
+                body = sb.toString();
+
+            } else if(protocol == HTTPProtocol.HTTP10){
 
                 StringBuilder sb = new StringBuilder();
                 
                 int b;
 
-                while((b = in.read()) != -1) {
-                    
+                while(socket.isClosed() || !socket.isConnected()) {
+                    b = in.read();
                     sb.append((char)b);
                 }
                 
                 body = sb.toString();
                 
+            } else {
+                throw new NoParseLinkException("No hay suficiente información para procesar");
             }
             //in.close();   
             ParseBody(body);
@@ -282,15 +330,22 @@ public class HTTPSocket {
         // TODO : Estoy filtrando mas de lo necesario
         if(!(headers.containsKey("Content-Type") && (headers.get("Content-Type").contains("text/html"))))
         {
-           Environment.getInstance().pedirPozosAvailable();
-           Environment.getInstance().addPozo(currentLink.getLowerURL()); 
-           Environment.getInstance().retornarPozosAvailable();
+           
+            try {
+                socket.close();
+            } catch (IOException ex) {
+                Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
+            }
+           socket = new Socket();
+           
            throw new NoParseLinkException("El archivo no es una página");
+           
         }
 
         if(headers.containsKey("Content-Length"))
         {
             contentLength = Integer.parseInt(headers.get("Content-Length"));
+
         }
         
         if(headers.containsKey("Transfer-Encoding"))
@@ -303,7 +358,7 @@ public class HTTPSocket {
     public void ParseBody(String body) {
         
         boolean tieneAbsolutas = extractUrlsAbsolutas(body);
-        boolean tieneReativas = extractUrlsRelativas(body);
+        boolean tieneReativas = false; //TODO: extractUrlsRelativas(body);
         extractMails(body);
         // Corroboro si es pozo
         esPozo = !tieneAbsolutas && !tieneReativas;
@@ -321,13 +376,14 @@ public class HTTPSocket {
         String urlPattern = "((http|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
         Pattern p = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(body);
-        
+        int i = 0;
         while (m.find()) {
             encontro = true;
             String u = (body.substring(m.start(0),m.end(0)));
             try {
+                i++;
                 URL url = new URL(u);
-                System.out.println("Encontre el link " + u);
+                //System.out.println("Encontre el link " + u);
                 esPozo = false;
                 int ttl = currentLink.getTtl();
                 if (ttl != -1) ttl = ttl-1;
@@ -343,6 +399,8 @@ public class HTTPSocket {
             }        
             
         }
+        System.out.println("Encontré:" + i + " links");
+        
         return encontro;
     }
     
@@ -356,27 +414,29 @@ public class HTTPSocket {
         while (m.find()) {
             encontro = true;
             String encontrado = (body.substring(m.start(0),m.end(0)));
-            String aaa = encontrado.substring(6, 9);
-            if (!encontrado.substring(6, 10).equals("http") && !encontrado.substring(6, 9).equals("www")){
-                String currentLinkURL = currentLink.getURL();
-                String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
-                String u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
-                try {
-                    URL url = new URL(u);
-                    System.out.println("Encontre el link " + u);
-                    // TODO : estoy seguro de que no es pozo? NO
-                    esPozo = false;
-                    int ttl = currentLink.getTtl();
-                    if (ttl != -1) ttl = ttl-1;
-                    if (ttl != 0)
-                    {
-                       Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
-                       Environment.getInstance().pedirLinksAvailable();
-                       Environment.getInstance().addLink(l);   
-                       Environment.getInstance().retornarLinksAvailable();
-                    }                
-                } catch (MalformedURLException e) {
-                    System.out.println(e);
+//            String aaa = encontrado.substring(6, 9);
+            if (encontrado.length()> 8){
+                if (!encontrado.substring(6, 10).equals("http") && !encontrado.substring(6, 9).equals("www")){
+                    String currentLinkURL = currentLink.getURL();
+                    String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
+                    String u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
+                    try {
+                        URL url = new URL(u);
+                        //System.out.println("Encontre el link " + u);
+                        // TODO : estoy seguro de que no es pozo? NO
+                        esPozo = false;
+                        int ttl = currentLink.getTtl();
+                        if (ttl != -1) ttl = ttl-1;
+                        if (ttl != 0)
+                        {
+                           Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                           Environment.getInstance().pedirLinksAvailable();
+                           Environment.getInstance().addLink(l);   
+                           Environment.getInstance().retornarLinksAvailable();
+                        }                
+                    } catch (MalformedURLException e) {
+                        System.out.println(e);
+                    }
                 }
             }
         }
