@@ -358,7 +358,7 @@ public class HTTPSocket {
     public void ParseBody(String body) {
         
         boolean tieneAbsolutas = extractUrlsAbsolutas(body);
-        boolean tieneReativas = false; //TODO: extractUrlsRelativas(body);
+        boolean tieneReativas = false;//TODO: extractUrlsRelativas(body);
         extractMails(body);
         // Corroboro si es pozo
         esPozo = !tieneAbsolutas && !tieneReativas;
