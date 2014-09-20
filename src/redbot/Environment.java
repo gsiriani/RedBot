@@ -114,6 +114,8 @@ public class Environment {
                 if(!getNombreArchivoMultilang().equals("")){
                     escribirArchivoMultilang();
                 }
+                
+                imprimirDebug("Terminoooo");
                 // TODO llamar imprimirDebug con  estadisticas, lista errores, etc
             }
             indiceHilosAvailable.release();
