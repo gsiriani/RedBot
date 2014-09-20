@@ -21,21 +21,19 @@ public class redbotThread implements Runnable{
     @Override
     public void run() {
         Environment.getInstance().imprimirDebug("Inicia hilo: " + threadID);
-        HTTPSocket socket = new HTTPSocket();        
+        HTTPSocket socket = new HTTPSocket();  
+        Environment.getInstance().pedirLinksAvailable();
         while(!Environment.getInstance().isEmptyPendingLinks())
-        {       
-            Environment.getInstance().pedirLinksAvailable();
+        {                   
             Link link = Environment.getInstance().getLink();
             Environment.getInstance().retornarLinksAvailable();
             Environment.getInstance().imprimirDebug("Evaluando link: " + link.getLowerURL());
-            socket.queryURL(link);            
+            socket.queryURL(link);   
+            Environment.getInstance().pedirLinksAvailable();
         }
+        Environment.getInstance().retornarLinksAvailable();
         Environment.getInstance().agregarHiloEnEspera(threadID);
         Environment.getInstance().imprimirDebug("Terminado hilo: " + threadID);
     }
-        
-    public static void main(String[] args){
-        (new Thread(new redbotThread(Integer.valueOf(args[0])))).start();    
-    }
-    
+            
 }

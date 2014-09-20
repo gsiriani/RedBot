@@ -152,12 +152,6 @@ public class RedBot {
         } // cierra while      
   
         Environment.getInstance().iniciarHilos();
-        try {
-            Environment.getInstance().wait();
-        } catch (InterruptedException ex) {
-            Logger.getLogger(RedBot.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
 
         
 //        HTTPSocket socket = new HTTPSocket();
@@ -178,21 +172,23 @@ public class RedBot {
 //            }     
 //        }
         
-        //Imprimo mails
-        for(String mail : Environment.getInstance().getMails())
-        {
-            System.out.println(mail);
-        }
         
-        if(!Environment.getInstance().getNombreArchivoPozos().equals("")){
-            Environment.getInstance().escribirArchivoPozos();
-        }
-        
-        if(!Environment.getInstance().getNombreArchivoMultilang().equals("")){
-            Environment.getInstance().escribirArchivoMultilang();
-        }
-        
-        // TODO llamar imprimirDebug con  estadisticas, lista errores, etc
+        // MOVIDO A ENVIRONMENT.agregarHiloEnEspera
+//        //Imprimo mails
+//        for(String mail : Environment.getInstance().getMails())
+//        {
+//            System.out.println(mail);
+//        }
+//        
+//        if(!Environment.getInstance().getNombreArchivoPozos().equals("")){
+//            Environment.getInstance().escribirArchivoPozos();
+//        }
+//        
+//        if(!Environment.getInstance().getNombreArchivoMultilang().equals("")){
+//            Environment.getInstance().escribirArchivoMultilang();
+//        }
+//        
+//        // TODO llamar imprimirDebug con  estadisticas, lista errores, etc
     }
     
 }

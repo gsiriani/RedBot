@@ -50,10 +50,10 @@ public class Environment {
     private int proxyPort = 3128;
     private boolean persistent = false;
     
-    private RedBot principal;
-    
     private Thread[] hilos; 
+    private Semaphore hilosAvailable;
     private Set<Integer> hilosEnEspera;
+    private Semaphore indiceHilosAvailable;
     
     
     private Environment() {
@@ -62,6 +62,8 @@ public class Environment {
         mailsAvailable = new Semaphore(1);
         pozosAvailable = new Semaphore(1);
         multilangAvailable = new Semaphore(1);
+        hilosAvailable = new Semaphore(1);
+        indiceHilosAvailable = new Semaphore(1);
         maxDepth = -1;
         nombreArchivoMultilang = "";
         nombreArchivoPozos = "";
@@ -70,19 +72,53 @@ public class Environment {
     }
     
     public void iniciarHilos(){
-        hilos = new Thread[maxCantThreads];
-        hilosEnEspera = new HashSet<Integer>();        
-        for(int i = 0; i < maxCantThreads; i++)
-        {
-            hilos[i] = new Thread(new redbotThread(i));
-            hilos[i].start();           
-        }    
+        try {
+            hilos = new Thread[maxCantThreads];
+            hilosEnEspera = new HashSet<Integer>();
+            for(int i = 0; i < maxCantThreads; i++)
+            {
+                indiceHilosAvailable.acquire();
+                hilosEnEspera.add(i);
+                indiceHilosAvailable.release();
+                hilosAvailable.acquire();
+                hilos[i] = new Thread(new redbotThread(i));
+                hilosAvailable.release();
+            }
+            indiceHilosAvailable.acquire();
+            hilosEnEspera.remove(0);
+            indiceHilosAvailable.release();
+            hilosAvailable.acquire();
+            hilos[0].start();
+            hilosAvailable.release();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     public void agregarHiloEnEspera(int threadID){
-        hilosEnEspera.add(threadID);
-        if(hilosEnEspera.size() == maxCantThreads){
-            RedBot.class.notify();
+        try {
+            indiceHilosAvailable.acquire();
+            hilosEnEspera.add(threadID);
+            if(hilosEnEspera.size() == maxCantThreads){
+                // Ejecuto comandos finales
+                // Imprimo mails
+                for(String mail : getMails())
+                {
+                    System.out.println(mail);
+                }
+                // Escribo archivo pozos
+                if(!getNombreArchivoPozos().equals("")){
+                    escribirArchivoPozos();
+                }
+                // Escribo archivo multilang
+                if(!getNombreArchivoMultilang().equals("")){
+                    escribirArchivoMultilang();
+                }
+                // TODO llamar imprimirDebug con  estadisticas, lista errores, etc
+            }
+            indiceHilosAvailable.release();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -95,15 +131,26 @@ public class Environment {
     }
 
     public void addLink(Link link) {             
+        System.out.println("Se agrega link");
         if(!allLinks.containsKey(link.getLowerURL())) {
-            pendingLinks.add(link);    
+            pendingLinks.add(link);
             allLinks.put(link.getLowerURL(), link);
             // Inicio nuevo thread
-            if(!hilosEnEspera.isEmpty())
-            {
-                Integer threadID = hilosEnEspera.iterator().next();
-                hilos[threadID].run();
-                hilosEnEspera.remove(threadID);
+            try {
+                indiceHilosAvailable.acquire();
+                if(!hilosEnEspera.isEmpty())
+                {
+                    System.out.println("Se iniciara hilo");
+                    Integer threadID = hilosEnEspera.iterator().next();
+                    hilosAvailable.acquire();
+                    hilos[threadID] = new Thread(new redbotThread(threadID));
+                    hilos[threadID].start();
+                    hilosAvailable.release();
+                    hilosEnEspera.remove(threadID);
+                }
+                indiceHilosAvailable.release();
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
             }
         }        
     }
@@ -349,7 +396,4 @@ public class Environment {
         }
     }
     
-    public void setPrincipal(RedBot principal) {
-        this.principal = principal;
-    }
 }
