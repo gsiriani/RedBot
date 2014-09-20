@@ -34,7 +34,7 @@ public class Environment {
     private HashMap<String,Link> allLinks = new HashMap<>();
     private Set<String> mails = new HashSet<>();
     private Semaphore mailsAvailable;
-    private Set<String> pozos;
+    private Set<String> pozos = new HashSet<String>();
     private Semaphore pozosAvailable;
     private Set<String> multilang;
     private Semaphore multilangAvailable;

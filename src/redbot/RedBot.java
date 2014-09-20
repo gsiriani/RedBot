@@ -160,16 +160,16 @@ public class RedBot {
             Environment.getInstance().pedirLinksAvailable();
             Link link = Environment.getInstance().getLink();
             Environment.getInstance().retornarLinksAvailable();
-            System.out.println("***NUEVO LINK: " + link.getLowerURL() + " TTL: " + link.getTtl());
-            try {
-                //if(link.getURL().contains("fing.edu.uy")) {
-                    socket.queryURL(link);
-                    
-                //}    
-            } catch (NoParseLinkException ex) {
-                System.err.println(ex.getMessage());
+            if(link.getURL().contains("fing.edu.uy")) {
+                System.out.println("***NUEVO LINK: " + link.getLowerURL() + " TTL: " + link.getTtl());
+                try {
+                        socket.queryURL(link);
+                } catch (NoParseLinkException ex) {
+                    System.err.println(ex.getMessage());
+                }
+                System.out.println("***FIN LINK");
             }
-            System.out.println("***FIN LINK");
+            
             
             
         }
