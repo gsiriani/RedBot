@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.sql.Array;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -49,6 +50,11 @@ public class Environment {
     private int proxyPort = 3128;
     private boolean persistent = false;
     
+    private RedBot principal;
+    
+    private Thread[] hilos; 
+    private Set<Integer> hilosEnEspera;
+    
     
     private Environment() {
         Debug = false;
@@ -62,6 +68,23 @@ public class Environment {
         maxCantThreads = 1;
         proxyURL = "";
     }
+    
+    public void iniciarHilos(){
+        hilos = new Thread[maxCantThreads];
+        hilosEnEspera = new HashSet<Integer>();        
+        for(int i = 0; i < maxCantThreads; i++)
+        {
+            hilos[i] = new Thread(new redbotThread(i));
+            hilos[i].start();           
+        }    
+    }
+    
+    public void agregarHiloEnEspera(int threadID){
+        hilosEnEspera.add(threadID);
+        if(hilosEnEspera.size() == maxCantThreads){
+            RedBot.class.notify();
+        }
+    }
 
     public static Environment getInstance() {
         
@@ -71,14 +94,25 @@ public class Environment {
         return _instance;
     }
 
-    public void addLink(Link link) {
-        
-        
+    public void addLink(Link link) {             
         if(!allLinks.containsKey(link.getLowerURL())) {
             pendingLinks.add(link);    
             allLinks.put(link.getLowerURL(), link);
-        }
-        
+            // Inicio nuevo thread
+            if(!hilosEnEspera.isEmpty())
+            {
+                Integer threadID = hilosEnEspera.iterator().next();
+                hilos[threadID].run();
+                hilosEnEspera.remove(threadID);
+            }
+        }        
+    }
+    
+    public void addLinkInicial(Link link) {             
+        if(!allLinks.containsKey(link.getLowerURL())) {
+            pendingLinks.add(link);    
+            allLinks.put(link.getLowerURL(), link);
+        }        
     }
     
     public Link getLinkByHost(String host) {
@@ -306,5 +340,16 @@ public class Environment {
         } catch (IOException ex) {
             Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
         }   
+    }
+    
+    public void imprimirDebug(String mensaje){
+        if(Debug)
+        {
+            System.err.print(mensaje + "\n");
+        }
+    }
+    
+    public void setPrincipal(RedBot principal) {
+        this.principal = principal;
     }
 }
