@@ -112,8 +112,14 @@ public class RedBot {
                     case prx: 
                              i++;
                              if (i < args.length) {
-                                 String URL = args[i];
-                                 Environment.getInstance().setProxyURL(URL);
+                                 String url = args[i];
+                                 String[] datos = url.split(":");
+                                 try {
+                                 Environment.getInstance().setProxyPort(Integer.valueOf(datos[1]));
+                                 } catch (Exception e) {
+                                     System.out.println("Error de proxy Puerto no int");
+                                 }
+                                 Environment.getInstance().setProxyURL(datos[0]);
                                  i++;
                                  if (i == args.length) {
                                      System.out.println("Error de sintaxis para proxy no URL");
