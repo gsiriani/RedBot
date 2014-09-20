@@ -30,10 +30,10 @@ public class Environment {
     
     private static Environment _instance = null;
 
-    private Set<Link> pendingLinks = new HashSet<>();
+    private Set<Link> pendingLinks = new HashSet<Link>();
     private Semaphore linksAvailable;
-    private HashMap<String,Link> allLinks = new HashMap<>();
-    private Set<String> mails = new HashSet<>();
+    private HashMap<String,Link> allLinks = new HashMap<String,Link>();
+    private Set<String> mails = new HashSet<String>();
     private Semaphore mailsAvailable;
     private Set<String> pozos = new HashSet<String>();
     private Semaphore pozosAvailable;
@@ -236,7 +236,7 @@ public class Environment {
     public void setNombreArchivoPozos(String nombreArchivoPozos) {
         this.nombreArchivoPozos = nombreArchivoPozos;
         pathPozos = Paths.get(nombreArchivoPozos);
-        pozos = new HashSet<>();
+        pozos = new HashSet<String>();
         // Creo el archivo
         try {
             // Create the empty file with default permissions, etc.
@@ -257,7 +257,7 @@ public class Environment {
     public void setNombreArchivoMultilang(String nombreArchivoMultilang) {
         this.nombreArchivoMultilang = nombreArchivoMultilang;
         pathMultilang = Paths.get(nombreArchivoMultilang);
-        multilang = new HashSet<>();
+        multilang = new HashSet<String>();
         // Creo el archivo
         try {
             // Create the empty file with default permissions, etc.

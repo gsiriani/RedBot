@@ -37,7 +37,7 @@ public class HTTPSocket {
     private String host = null;
     private int port = 80;
   
-    private HashMap<String, String> headers = new HashMap<>();   
+    private HashMap<String, String> headers = new HashMap<String,String>();   
     private String body;
     private boolean esPozo;
     
@@ -152,7 +152,7 @@ public class HTTPSocket {
         transferEncoding = "";
         contentLength = -1;
 
-        headers = new HashMap<>();
+        headers = new HashMap<String,String>();
         
         if (socket.isClosed() || !socket.isConnected()) { // Si hay que conectar
 
@@ -405,7 +405,6 @@ public class HTTPSocket {
     }
     
     private boolean extractUrlsRelativas(String body){   
-        // TODO : este pattern es un penal, CHEQUEAR
         boolean encontro = false;
         String relativeUrlPattern = "(href=\"[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*\")";
         Pattern p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
@@ -414,29 +413,34 @@ public class HTTPSocket {
         while (m.find()) {
             encontro = true;
             String encontrado = (body.substring(m.start(0),m.end(0)));
-//            String aaa = encontrado.substring(6, 9);
-            if (encontrado.length()> 8){
-                if (!encontrado.substring(6, 10).equals("http") && !encontrado.substring(6, 9).equals("www")){
+            if (encontrado.length()> 9){
+                String u = "";
+                if (encontrado.substring(6, 9).equals("www")){
+                    u = "http://" + encontrado.substring(6, encontrado.length()-1);
+                } else if (encontrado.substring(6, 7).equals("/")) {
+                    u = "http://" + currentLink.getHost() + encontrado.substring(6, encontrado.length()-1);
+                } else if (!encontrado.substring(6, 10).equals("http")){
                     String currentLinkURL = currentLink.getURL();
                     String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
-                    String u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
-                    try {
-                        URL url = new URL(u);
-                        //System.out.println("Encontre el link " + u);
-                        // TODO : estoy seguro de que no es pozo? NO
-                        esPozo = false;
-                        int ttl = currentLink.getTtl();
-                        if (ttl != -1) ttl = ttl-1;
-                        if (ttl != 0)
-                        {
-                           Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
-                           Environment.getInstance().pedirLinksAvailable();
-                           Environment.getInstance().addLink(l);   
-                           Environment.getInstance().retornarLinksAvailable();
-                        }                
-                    } catch (MalformedURLException e) {
-                        System.out.println(e);
-                    }
+                    u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
+                }
+                
+                try {
+                    URL url = new URL(u);
+                    //System.out.println("Encontre el link " + u);
+                    // TODO : estoy seguro de que no es pozo? NO
+                    esPozo = false;
+                    int ttl = currentLink.getTtl();
+                    if (ttl != -1) ttl = ttl-1;
+                    if (ttl != 0)
+                    {
+                       Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                       Environment.getInstance().pedirLinksAvailable();
+                       Environment.getInstance().addLink(l);   
+                       Environment.getInstance().retornarLinksAvailable();
+                    }                
+                } catch (MalformedURLException e) {
+                    System.out.println(e);
                 }
             }
         }

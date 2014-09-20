@@ -20,8 +20,10 @@ public class RedBot {
         boolean error = false;
         while ((i < args.length) && !error ) {
             if(args[i].startsWith("-")) {
-                switch (args[i].substring(1)) {
-                    case "d":  
+                String paramString = args[i].substring(1);
+                SwitchString paramEnum = toSwitchString(paramString);
+                switch (paramEnum) {
+                    case d:  
                             Environment.getInstance().setDebug(true);
                             i++;
                             if (i == args.length) {
@@ -29,7 +31,7 @@ public class RedBot {
                                      error = true;
                             }
                             break;
-                    case "depth":  
+                    case depth:  
                             i++;
                             if (i < args.length) {
                                  try {
@@ -49,7 +51,7 @@ public class RedBot {
                                 error = true;
                             }
                             break;
-                    case "persistent":  
+                    case persistent:  
                              Environment.getInstance().setPersistent(true);
                              i++;
                              if (i == args.length) {
@@ -57,7 +59,7 @@ public class RedBot {
                                      error = true;
                              }
                              break;
-                    case "pozos":  
+                    case pozos:  
                              i++;
                              if (i < args.length) {
                                  String fileName = args[i];
@@ -72,7 +74,7 @@ public class RedBot {
                                 error = true;
                              }
                              break;
-                    case "multilang": 
+                    case multilang: 
                              i++;
                              if (i < args.length) {
                                  String fileName = args[i];
@@ -87,7 +89,7 @@ public class RedBot {
                                 error = true;
                              }
                              break;
-                    case "p":  
+                    case p:  
                              i++;
                              if (i < args.length) {
                                  try {
@@ -107,7 +109,7 @@ public class RedBot {
                                 error = true;
                              }
                              break;
-                    case "prx": 
+                    case prx: 
                              i++;
                              if (i < args.length) {
                                  String URL = args[i];
@@ -189,6 +191,31 @@ public class RedBot {
 //        }
 //        
 //        // TODO llamar imprimirDebug con  estadisticas, lista errores, etc
+    }
+    
+    public static SwitchString toSwitchString(String param){
+        if (param.equals("d")) {
+            return SwitchString.d;
+        }
+        if (param.equals("depth")) {
+            return SwitchString.depth;
+        }
+        if (param.equals("multilang")) {
+            return SwitchString.multilang;
+        }
+        if (param.equals("p")) {
+            return SwitchString.p;
+        }
+        if (param.equals("persistent")) {
+            return SwitchString.persistent;
+        }
+        if (param.equals("pozos")) {
+            return SwitchString.pozos;
+        }
+        if (param.equals("prx")) {
+            return SwitchString.prx;
+        }
+        return SwitchString.error;
     }
     
 }
