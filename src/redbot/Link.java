@@ -15,13 +15,23 @@ public class Link {
     private String host;
     private String path;
     private int port;
-    private int ttl;    
+    private int ttl;  
+    private boolean pozo;
+
+    public boolean isPozo() {
+        return pozo;
+    }
+
+    public void setPozo(boolean pozo) {
+        this.pozo = pozo;
+    }
 
     public Link(String host, String path, int port, int ttl) {
         this.host = host;
         this.path = path;
         this.port = port;
         this.ttl = ttl;
+        this.pozo = true;
     }
 
     public Link() {

@@ -39,7 +39,6 @@ public class HTTPSocket {
   
     private HashMap<String, String> headers = new HashMap<String,String>();   
     private String body;
-    private boolean esPozo;
     
     private HTTPProtocol protocol;
     private boolean isOK;
@@ -51,7 +50,6 @@ public class HTTPSocket {
     private int noReconnections = 0;
     
     public HTTPSocket() {
-        this.esPozo = true;
         socket = new Socket();
         
     }
@@ -358,11 +356,11 @@ public class HTTPSocket {
     public void ParseBody(String body) {
         
         boolean tieneAbsolutas = extractUrlsAbsolutas(body);
-        boolean tieneReativas = false;//TODO: extractUrlsRelativas(body);
+        boolean tieneReativas = extractUrlsRelativas(body);
         extractMails(body);
         // Corroboro si es pozo
-        esPozo = !tieneAbsolutas && !tieneReativas;
-        if(esPozo && !Environment.getInstance().getNombreArchivoPozos().isEmpty())
+        currentLink.setPozo(!tieneAbsolutas && !tieneReativas);
+        if(currentLink.isPozo() && !Environment.getInstance().getNombreArchivoPozos().isEmpty())
         {
             Environment.getInstance().pedirPozosAvailable();
             Environment.getInstance().addPozo(this.currentLink.getLowerURL());
@@ -383,8 +381,6 @@ public class HTTPSocket {
             try {
                 i++;
                 URL url = new URL(u);
-                //System.out.println("Encontre el link " + u);
-                esPozo = false;
                 int ttl = currentLink.getTtl();
                 if (ttl != -1) ttl = ttl-1;
                 if (ttl != 0)
@@ -411,7 +407,6 @@ public class HTTPSocket {
         Matcher m = p.matcher(body);
         
         while (m.find()) {
-            encontro = true;
             String encontrado = (body.substring(m.start(0),m.end(0)));
             if (encontrado.length()> 9){
                 String u = "";
@@ -425,55 +420,28 @@ public class HTTPSocket {
                     u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
                 }
                 
-                try {
-                    URL url = new URL(u);
-                    //System.out.println("Encontre el link " + u);
-                    // TODO : estoy seguro de que no es pozo? NO
-                    esPozo = false;
-                    int ttl = currentLink.getTtl();
-                    if (ttl != -1) ttl = ttl-1;
-                    if (ttl != 0)
-                    {
-                       Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
-                       Environment.getInstance().pedirLinksAvailable();
-                       Environment.getInstance().addLink(l);   
-                       Environment.getInstance().retornarLinksAvailable();
-                    }                
-                } catch (MalformedURLException e) {
-                    System.out.println(e);
+                if (!u.isEmpty()) {
+                    System.out.println("Encontre el link " + u); 
+                    encontro = true;
+                    try {
+                        URL url = new URL(u);
+                        int ttl = currentLink.getTtl();
+                        if (ttl != -1) ttl = ttl-1;
+                        if (ttl != 0)
+                        {
+                           Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                           Environment.getInstance().pedirLinksAvailable();
+                           Environment.getInstance().addLink(l);   
+                           Environment.getInstance().retornarLinksAvailable();
+                        }                
+                    } catch (MalformedURLException e) {
+                        System.out.println(e);
+                    }
                 }
             }
         }
         return encontro;
     }
-    
-    /*private void extractUrlsRelativas(String body){   
-        // TODO : este pattern es un penal, CHEQUEAR
-        String relativeUrlPattern = "([\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]+)";
-        Pattern p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
-        Matcher m = p.matcher(body);
-        
-        while (m.find()) {
-            String u = currentLink.getLowerURL() + (body.substring(m.start(0),m.end(0)));
-            try {
-                URL url = new URL(u);
-                System.out.println("Encontre el link " + u);
-                // TODO : estoy seguro de que no es pozo?
-                esPozo = false;
-                int ttl = currentLink.getTtl();
-                if (ttl != -1) ttl = ttl-1;
-                if (ttl != 0)
-                {
-                   Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
-                   Environment.getInstance().pedirLinksAvailable();
-                   Environment.getInstance().addLink(l);   
-                   Environment.getInstance().retornarLinksAvailable();
-                }                
-            } catch (MalformedURLException e) {
-                
-            }
-        }
-    }*/
     
     private void extractMails(String body){
         String mailPattern = "[_A-Za-z0-9-\\\\+]+(\\\\.[_A-Za-z0-9-]+)*"
