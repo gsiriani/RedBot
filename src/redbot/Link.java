@@ -78,6 +78,12 @@ public class Link {
     public String getURL() {
         return ("http://" + getHost() + getPath());
     }
+
+    @Override
+    public String toString() {
+        return getURL();
+    }
+ 
     
     
 }

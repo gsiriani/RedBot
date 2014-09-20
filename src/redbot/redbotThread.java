@@ -27,8 +27,12 @@ public class redbotThread implements Runnable{
         {                   
             Link link = Environment.getInstance().getLink();
             Environment.getInstance().retornarLinksAvailable();
-            Environment.getInstance().imprimirDebug("Evaluando link: " + link.getLowerURL());
-            socket.queryURL(link);   
+            Environment.getInstance().imprimirDebug("Evaluando link [Hilo " + threadID + "]: " + link.getLowerURL());
+            try {
+                socket.queryURL(link);   
+            } catch (NoParseLinkException ex) {
+                Environment.getInstance().imprimirDebug("Página no parseada:" + ex.getMessage());
+            }
             Environment.getInstance().pedirLinksAvailable();
         }
         Environment.getInstance().retornarLinksAvailable();

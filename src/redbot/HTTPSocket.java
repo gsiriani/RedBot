@@ -243,7 +243,20 @@ public class HTTPSocket {
             System.out.println("te = " + transferEncoding);
             System.out.println("cl = " + contentLength);
             
-            if(contentLength != -1)
+            
+            if(protocol == HTTPProtocol.HTTP10){
+
+                StringBuilder sb = new StringBuilder();
+                
+                int b;
+
+                while(socket.isClosed() || !socket.isConnected()) {
+                    b = in.read();
+                    sb.append((char)b);
+                }
+                
+                body = sb.toString();
+            } else if(contentLength != -1)
             {
                 byte[] content = new byte[contentLength];
                 int readed = 0;
@@ -297,19 +310,6 @@ public class HTTPSocket {
 
                 body = sb.toString();
 
-            } else if(protocol == HTTPProtocol.HTTP10){
-
-                StringBuilder sb = new StringBuilder();
-                
-                int b;
-
-                while(socket.isClosed() || !socket.isConnected()) {
-                    b = in.read();
-                    sb.append((char)b);
-                }
-                
-                body = sb.toString();
-                
             } else {
                 throw new NoParseLinkException("No hay suficiente información para procesar");
             }
@@ -414,7 +414,7 @@ public class HTTPSocket {
                     u = "http://" + encontrado.substring(6, encontrado.length()-1);
                 } else if (encontrado.substring(6, 7).equals("/")) {
                     u = "http://" + currentLink.getHost() + encontrado.substring(6, encontrado.length()-1);
-                } else if (!encontrado.substring(6, 10).equals("http")){
+                } else if (!encontrado.substring(6, 10).equals("http") && !encontrado.contains("@")){
                     String currentLinkURL = currentLink.getURL();
                     String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
                     u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
@@ -444,8 +444,17 @@ public class HTTPSocket {
     }
     
     private void extractMails(String body){
-        String mailPattern = "[_A-Za-z0-9-\\\\+]+(\\\\.[_A-Za-z0-9-]+)*"
-                + "@[A-Za-z0-9-]+(\\\\.[A-Za-z0-9]+)*(\\\\.[A-Za-z]{2,})";
+        String mailPattern = "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+"
+                + "(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:"
+                + "[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23"
+                + "-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c"
+                + "\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*"
+                + "[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
+                + "|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+                + "\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|"
+                + "[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x"
+                + "0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x0"
+                + "9\\x0b\\x0c\\x0e-\\x7f])+)\\])";
         Pattern p = Pattern.compile(mailPattern,Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(body);        
         while (m.find()) {

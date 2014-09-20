@@ -48,7 +48,7 @@ public class Environment {
     private Path pathMultilang;
     private int maxCantThreads;
     private String proxyURL;
-    private int proxyPort = 3128;
+    private int proxyPort;
     private boolean persistent = false;
     
     private Thread[] hilos; 
@@ -70,6 +70,7 @@ public class Environment {
         nombreArchivoPozos = "";
         maxCantThreads = 1;
         proxyURL = "";
+        proxyPort = -1;
     }
     
     public void iniciarHilos(){
@@ -116,13 +117,28 @@ public class Environment {
                     escribirArchivoMultilang();
                 }
                 
-                imprimirDebug("Terminoooo");
+                imprimirDebug("Links encontrados:\n");
+                imprimirDebug(LinksToString());
                 // TODO llamar imprimirDebug con  estadisticas, lista errores, etc
             }
             indiceHilosAvailable.release();
         } catch (InterruptedException ex) {
             Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    public String LinksToString() {
+        
+            String str = "";
+        
+            for (Link link : allLinks.values()) {
+                
+                str += link.toString() + "\n";
+                
+            }
+            
+            return str;
+    
     }
 
     public static Environment getInstance() {
@@ -135,6 +151,7 @@ public class Environment {
 
     public void addLink(Link link) {             
         System.out.println("Se agrega link");
+        
         if(!allLinks.containsKey(link.getLowerURL())) {
             pendingLinks.add(link);
             allLinks.put(link.getLowerURL(), link);
