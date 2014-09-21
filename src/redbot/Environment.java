@@ -73,7 +73,11 @@ public class Environment {
         proxyPort = -1;
     }
     
+       
     public void iniciarHilos(){
+        
+        
+        
         try {
             hilos = new Thread[maxCantThreads];
             hilosEnEspera = new HashSet<Integer>();
@@ -103,11 +107,6 @@ public class Environment {
             hilosEnEspera.add(threadID);
             if(hilosEnEspera.size() == maxCantThreads){
                 // Ejecuto comandos finales
-                // Imprimo mails
-                for(String mail : getMails())
-                {
-                    System.out.println(mail);
-                }
                 // Escribo archivo pozos
                 if(!getNombreArchivoPozos().equals("")){
                     escribirArchivoPozos();
@@ -116,9 +115,13 @@ public class Environment {
                 if(!getNombreArchivoMultilang().equals("")){
                     escribirArchivoMultilang();
                 }
-                
                 imprimirDebug("Links encontrados:\n");
                 imprimirDebug(LinksToString());
+                // Imprimo mails
+                for(String mail : getMails())
+                {
+                    System.out.println(mail);
+                }
                 // TODO llamar imprimirDebug con  estadisticas, lista errores, etc
             }
             indiceHilosAvailable.release();
@@ -150,7 +153,6 @@ public class Environment {
     }
 
     public void addLink(Link link) {             
-        System.out.println("Se agrega link");
         
         if(!allLinks.containsKey(link.getLowerURL())) {
             pendingLinks.add(link);
@@ -160,8 +162,8 @@ public class Environment {
                 indiceHilosAvailable.acquire();
                 if(!hilosEnEspera.isEmpty())
                 {
-                    System.out.println("Se iniciara hilo");
                     Integer threadID = hilosEnEspera.iterator().next();
+                    imprimirDebug("Se reinicia hilo" + threadID);
                     hilosAvailable.acquire();
                     hilos[threadID] = new Thread(new redbotThread(threadID));
                     hilos[threadID].start();
@@ -262,11 +264,9 @@ public class Environment {
             // Create the empty file with default permissions, etc.
             Files.createFile(pathPozos);
         } catch (FileAlreadyExistsException x) {
-            System.err.format("file named %s" +
-                " already exists%n", pathPozos);
+            throw new RedBotException("El archivo " + pathPozos + " ya existe");
         } catch (IOException x) {
-            // Some other sort of failure, such as permissions.
-            System.err.format("createFile error: %s%n", x);
+            throw new RedBotException("No se pudo crear el archivo '" + pathPozos + "'");
         }
     }
 
@@ -283,11 +283,9 @@ public class Environment {
             // Create the empty file with default permissions, etc.
             Files.createFile(pathMultilang);
         } catch (FileAlreadyExistsException x) {
-            System.err.format("file named %s" +
-                " already exists%n", pathMultilang);
+            throw new RedBotException("El archivo " + pathMultilang + " ya existe");
         } catch (IOException x) {
-            // Some other sort of failure, such as permissions.
-            System.err.format("createFile error: %s%n", x);
+            throw new RedBotException("No se pudo crear el archivo '" + pathMultilang + "'");
         }
     }
 
@@ -393,7 +391,7 @@ public class Environment {
             Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
         }   
     }
-   
+       
     public void escribirArchivoMultilang(){ 
         try {
             Iterator it = multilang.iterator();

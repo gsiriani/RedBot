@@ -109,7 +109,7 @@ public class HTTPSocket {
                
            } catch (LinkFailed e) {
                
-               System.err.println("Error: " + e.getMessage() +".\nReintentando.");
+               Environment.getInstance().imprimirDebug("Error: " + e.getMessage() +". Reintentando.");
                retry = true;
                
                try {
@@ -137,12 +137,13 @@ public class HTTPSocket {
         
         if(!isPersistent() || !Environment.getInstance().isPersistent()) {
            try {
-               System.err.println("Desconectado por no ser persistente!");
+               Environment.getInstance().imprimirDebug("Desconectado por no ser una conexión persistente!");
                socket.close();
            } catch (IOException ex) {
                Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
            }
-        }       
+        }    
+        
         
     }
     
@@ -160,7 +161,7 @@ public class HTTPSocket {
             try {
                 socket = new Socket();
                 socket.connect(adress, CONNECTION_TIMEOUT);
-                System.err.println("Conectado!!!!");
+                Environment.getInstance().imprimirDebug("Socket conectado al host '" + currentLink.getHost() + "'");
                 
                 try {
                     out = new PrintWriter(socket.getOutputStream(),true);
@@ -205,7 +206,6 @@ public class HTTPSocket {
                 }
                 retry--;
                 try {
-                    System.err.println("Tiempo de espera agotado. Quedan " + retry + " intentos");
                     Thread.sleep(1500);
                 } catch (InterruptedException ex) {
                     Logger.getLogger(HTTPSocket.class.getName()).log(Level.SEVERE, null, ex);
@@ -213,7 +213,7 @@ public class HTTPSocket {
             }
             
             if (retry == 0) {
-                   throw new LinkFailed("El servidor para '" + currentLink.getURL() + "' demora mucho en responder.");
+                   throw new LinkFailed("El servidor para '" + currentLink.getHost()+ "' demoró mucho en responder al request");
             }
             
             
@@ -262,11 +262,7 @@ public class HTTPSocket {
             }
             
             analyzeHeaders();    
-            
-            System.out.println("te = " + transferEncoding);
-            System.out.println("cl = " + contentLength);
-            
-            
+                        
             if(protocol == HTTPProtocol.HTTP10){
 
                 StringBuilder sb = new StringBuilder();
@@ -422,12 +418,13 @@ public class HTTPSocket {
             }        
             
         }
-        System.out.println("Encontré:" + i + " links");
+        Environment.getInstance().imprimirDebug("Encontré " + i + " links en la URL '" + currentLink.getURL() + "'");
         
         return encontro;
     }
     
     private boolean extractUrlsRelativas(String body){   
+        
         boolean encontro = false;
         String relativeUrlPattern = "(href=\"[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*\")";
         Pattern p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
@@ -448,7 +445,6 @@ public class HTTPSocket {
                 }
                 
                 if (!u.isEmpty()) {
-                    System.out.println("Encontre el link " + u); 
                     encontro = true;
                     try {
                         URL url = new URL(u);
@@ -462,7 +458,7 @@ public class HTTPSocket {
                            Environment.getInstance().retornarLinksAvailable();
                         }                
                     } catch (MalformedURLException e) {
-                        System.out.println(e);
+                        throw new NoParseLinkException("URL mal formada: " + u);
                     }
                 }
             }
