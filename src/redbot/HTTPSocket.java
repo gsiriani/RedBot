@@ -421,7 +421,7 @@ public class HTTPSocket {
             }        
             
         }
-        Environment.getInstance().imprimirDebug("Encontré " + i + " links en la URL '" + currentLink.getURL() + "'");
+        Environment.getInstance().imprimirDebug("Encontré " + i + " links absolutas en la URL '" + currentLink.getURL() + "'");
         
         return encontro;
     }
@@ -429,9 +429,10 @@ public class HTTPSocket {
     private boolean extractUrlsRelativas(String body){   
         
         boolean encontro = false;
-        String relativeUrlPattern = "(href=\"[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*\")";
+        String relativeUrlPattern = "href=\\\"(.*?)\\\"";
         Pattern p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(body);
+        int i = 0;
         
         while (m.find()) {
             String encontrado = (body.substring(m.start(0),m.end(0)));
@@ -451,6 +452,7 @@ public class HTTPSocket {
                 
                 if (!u.isEmpty()) {
                     encontro = true;
+                    i++;
                     try {
                         URL url = new URL(u);
                         int ttl = currentLink.getTtl();
@@ -468,7 +470,12 @@ public class HTTPSocket {
                 }
             }
         }
+        
+        Environment.getInstance().imprimirDebug("Encontré " + i + " links relativas en la URL '" + currentLink.getURL() + "'");
+        
         return encontro;
+        
+        
     }
     
     private void extractMails(String body){
