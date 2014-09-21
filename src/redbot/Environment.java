@@ -6,14 +6,9 @@
 
 package redbot;
 
-import java.io.File;
+import java.io.*;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.sql.Array;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,9 +38,9 @@ public class Environment {
     private boolean Debug;
     private int maxDepth;
     private String nombreArchivoPozos;
-    private Path pathPozos;
+    private File pathPozos;
     private String nombreArchivoMultilang;
-    private Path pathMultilang;
+    private File pathMultilang;
     private int maxCantThreads;
     private String proxyURL;
     private int proxyPort;
@@ -56,8 +51,9 @@ public class Environment {
     private Semaphore hilosAvailable;
     private Set<Integer> hilosEnEspera;
     private Semaphore indiceHilosAvailable;
-    
-    
+    private int cantidadRepetidos = 0;
+    private int cantidadNoPagina = 0;
+        
     private Environment() {
         Debug = false;
         linksAvailable = new Semaphore(1);
@@ -109,32 +105,7 @@ public class Environment {
             hilosEnEspera.add(threadID);
             if(hilosEnEspera.size() == maxCantThreads){
                 // Ejecuto comandos finales
-                // Escribo archivo pozos
-                if(!getNombreArchivoPozos().equals("")){
-                    escribirArchivoPozos();
-                }
-                // Escribo archivo multilang
-                if(!getNombreArchivoMultilang().equals("")){
-                    escribirArchivoMultilang();
-                }
-                imprimirDebug("Links encontrados:\n");
-                imprimirDebug(LinksToString());
-                // Imprimo motivo de fin
-                if(recursosAgotados)
-                {
-                    System.out.print("\nPrograma finalizado por agotar recursos (memoria)\n");
-                }
-                else
-                {
-                   System.out.print("\nPrograma finalizado por no tener mas links para evaluar\n");
-                }
-                // Imprimo mails
-                System.out.print("Mails detectados:\n");
-                for(String mail : getMails())
-                {
-                    System.out.println(mail);
-                }
-                // TODO llamar imprimirDebug con  estadisticas, lista errores, etc
+                shutdown();
             }
             indiceHilosAvailable.release();
         } catch (InterruptedException ex) {
@@ -189,6 +160,8 @@ public class Environment {
                     Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
+        } else {
+            cantidadRepetidos++;
         }        
     }
     
@@ -272,17 +245,8 @@ public class Environment {
     
     public void setNombreArchivoPozos(String nombreArchivoPozos) {
         this.nombreArchivoPozos = nombreArchivoPozos;
-        pathPozos = Paths.get(nombreArchivoPozos);
+        pathPozos = new File(nombreArchivoPozos);
         pozos = new HashSet<String>();
-        // Creo el archivo
-        try {
-            // Create the empty file with default permissions, etc.
-            Files.createFile(pathPozos);
-        } catch (FileAlreadyExistsException x) {
-            throw new RedBotException("El archivo " + pathPozos + " ya existe");
-        } catch (IOException x) {
-            throw new RedBotException("No se pudo crear el archivo '" + pathPozos + "'");
-        }
     }
 
     public String getNombreArchivoMultilang() {
@@ -291,17 +255,8 @@ public class Environment {
 
     public void setNombreArchivoMultilang(String nombreArchivoMultilang) {
         this.nombreArchivoMultilang = nombreArchivoMultilang;
-        pathMultilang = Paths.get(nombreArchivoMultilang);
+        pathMultilang = new File(nombreArchivoMultilang);
         multilang = new HashSet<String>();
-        // Creo el archivo
-        try {
-            // Create the empty file with default permissions, etc.
-            Files.createFile(pathMultilang);
-        } catch (FileAlreadyExistsException x) {
-            throw new RedBotException("El archivo " + pathMultilang + " ya existe");
-        } catch (IOException x) {
-            throw new RedBotException("No se pudo crear el archivo '" + pathMultilang + "'");
-        }
     }
 
     public int getMaxCantThreads() {
@@ -320,11 +275,11 @@ public class Environment {
         this.proxyURL = proxyURL;
     }
 
-    public Path getPathPozos() {
+    public File getPathPozos() {
         return pathPozos;
     }
 
-    public Path getPathMultilang() {
+    public File getPathMultilang() {
         return pathMultilang;
     }   
 
@@ -396,12 +351,12 @@ public class Environment {
         try {
             Iterator it = pozos.iterator();
             String URLPozo;
-            byte [] linea;
+            FileWriter fw = new FileWriter(pathPozos,true);
             while (it.hasNext()) {
                 URLPozo = (String) it.next()+"\n";
-                linea = URLPozo.getBytes();
-                Files.write(pathPozos, linea, StandardOpenOption.APPEND);
+                fw.append(URLPozo);
             }
+            fw.close();
         } catch (IOException ex) {
             Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
         }   
@@ -411,12 +366,12 @@ public class Environment {
         try {
             Iterator it = multilang.iterator();
             String URLMultilang;
-            byte [] linea;
+            FileWriter fw = new FileWriter(pathMultilang,true);
             while (it.hasNext()) {
                 URLMultilang = (String) it.next()+"\n";
-                linea = URLMultilang.getBytes();
-                Files.write(pathMultilang, linea, StandardOpenOption.APPEND);
+                fw.append(URLMultilang);
             }
+            fw.close();
         } catch (IOException ex) {
             Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
         }   
@@ -449,6 +404,57 @@ public class Environment {
         this.recursosAgotados = recursosAgotados;
     }
     
+    private void shutdown(){
+        // Escribo archivo pozos
+        if(!getNombreArchivoPozos().equals("")){
+            escribirArchivoPozos();
+        }
+        // Escribo archivo multilang
+        if(!getNombreArchivoMultilang().equals("")){
+            escribirArchivoMultilang();
+        }
+        imprimirDebug("Links encontrados:\n");
+        imprimirDebug(LinksToString());
+        // Imprimo motivo de fin
+        if(recursosAgotados)
+        {
+            System.out.print("\nPrograma finalizado por agotar recursos (memoria)\n");
+        }
+        else
+        {
+           System.out.print("\nPrograma finalizado por no tener mas links para evaluar\n");
+        }
+        // Imprimo mails
+        if(mails.isEmpty())
+        {
+            System.out.print("No se detectaron mails\n");
+        }
+        else{
+            System.out.print("Mails detectados (" + getMails().size() + "):\n"); 
+            for(String mail : getMails())
+            {
+                System.out.println(mail);
+            }
+        }        
+        
+        imprimirDebug("Links recorridos: " + (allLinks.size() - pendingLinks.size()));
+        if(recursosAgotados) {
+            imprimirDebug("Links que quedaron pendientes: " + pendingLinks.size());
+        }
+        imprimirDebug("Links repetidos: " + cantidadRepetidos);
+        imprimirDebug("Links que no son HTML: " + cantidadNoPagina);
+        if (!nombreArchivoPozos.isEmpty())
+            imprimirDebug("Links que son pozos: " + pozos.size());
+        if (!nombreArchivoMultilang.isEmpty())
+            imprimirDebug("Links que son multilang: " + multilang.size());
+        
+        
+        // TODO llamar imprimirDebug con  estadisticas, lista errores, etc
+    }
+    
+    public synchronized void NoEsPagina() {
+        cantidadNoPagina++;
+    }
     
     
 }
