@@ -150,7 +150,12 @@ public class RedBot {
                             URL url = new URL(urlIngresado);
                             //TODO : que pasa si el puerto no es 80?
                             int ttl = Environment.getInstance().getMaxDepth();
-                            Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                            Link l;
+                            if(url.getPort() == -1) {
+                                l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                            } else  {
+                                l = new Link(url.getHost(), url.getFile(), url.getPort(), ttl);
+                            }
                             Environment.getInstance().pedirLinksAvailable();
                             Environment.getInstance().addLinkInicial(l);
                             Environment.getInstance().retornarLinksAvailable();

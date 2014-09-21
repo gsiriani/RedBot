@@ -72,11 +72,19 @@ public class Link {
     }
     
     public String getLowerURL() {
-        return (getHost() + getPath()).toLowerCase();
+        String puerto = "";
+        if (getPort() != 80) {
+            puerto = ":" + getPort();
+        }
+        return (getHost() + puerto + getPath()).toLowerCase();
     }
     
     public String getURL() {
-        return ("http://" + getHost() + getPath());
+        String puerto = "";
+        if (getPort() != 80) {
+            puerto = ":" + getPort();
+        }
+        return ("http://" + getHost() + puerto + getPath());
     }
 
     @Override

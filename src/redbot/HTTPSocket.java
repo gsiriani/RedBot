@@ -444,7 +444,11 @@ public class HTTPSocket {
                 if (ttl != -1) ttl = ttl-1;
                 if (ttl != 0)
                 {
-                   Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                   int puerto = 80;
+                   if(url.getPort() != -1) {
+                       puerto = url.getPort();
+                   }
+                   Link l = new Link(url.getHost(), url.getFile(), puerto, ttl);
                    Environment.getInstance().pedirLinksAvailable();
                    Environment.getInstance().addLink(l);   
                    Environment.getInstance().retornarLinksAvailable();
@@ -492,7 +496,11 @@ public class HTTPSocket {
                         if (ttl != -1) ttl = ttl-1;
                         if (ttl != 0)
                         {
-                           Link l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                            int puerto = 80;
+                            if(url.getPort() != -1) {
+                                puerto = url.getPort();
+                            }
+                           Link l = new Link(url.getHost(), url.getFile(), puerto, ttl);
                            Environment.getInstance().pedirLinksAvailable();
                            Environment.getInstance().addLink(l);   
                            Environment.getInstance().retornarLinksAvailable();
@@ -538,6 +546,14 @@ public class HTTPSocket {
             String relativeUrlPattern = "href=\\\"(.*?)\\\"";
             p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
             m = p.matcher(body);
+            
+            
+            String puerto;
+            if(currentLink.getPort() != 80) {
+                puerto = ":" + currentLink.getPort();
+            } else {
+                puerto = "";
+            }
 
             while (m.find()) {
                 String encontrado = (body.substring(m.start(0),m.end(0)));
@@ -548,7 +564,7 @@ public class HTTPSocket {
                     } else if (encontrado.substring(6, 8).equals("//")) {
                         u = "http:" + encontrado.substring(6, encontrado.length()-1);
                     } else if (encontrado.substring(6, 7).equals("/")) {
-                        u = "http://" + currentLink.getHost() + encontrado.substring(6, encontrado.length()-1);    
+                        u = "http://" + currentLink.getHost() + puerto + encontrado.substring(6, encontrado.length()-1);    
                     } else if (!encontrado.substring(6, 10).equals("http") && !encontrado.contains("@")){
                         String currentLinkURL = currentLink.getURL();
                         String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
@@ -561,7 +577,7 @@ public class HTTPSocket {
                         try {
                             URL url = new URL(u);
                             int ttl = currentLink.getTtl();
-                            l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                            l = new Link(url.getHost(), url.getFile(), url.getPort(), ttl);
                             return l;
                         } catch (MalformedURLException e) {
 
