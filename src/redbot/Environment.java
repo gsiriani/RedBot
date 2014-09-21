@@ -50,6 +50,7 @@ public class Environment {
     private String proxyURL;
     private int proxyPort;
     private boolean persistent = false;
+    private boolean recursosAgotados;
     
     private Thread[] hilos; 
     private Semaphore hilosAvailable;
@@ -71,6 +72,7 @@ public class Environment {
         maxCantThreads = 1;
         proxyURL = "";
         proxyPort = -1;
+        recursosAgotados = false;
     }
     
        
@@ -117,7 +119,17 @@ public class Environment {
                 }
                 imprimirDebug("Links encontrados:\n");
                 imprimirDebug(LinksToString());
+                // Imprimo motivo de fin
+                if(recursosAgotados)
+                {
+                    System.out.print("\nPrograma finalizado por agotar recursos (memoria)\n");
+                }
+                else
+                {
+                   System.out.print("\nPrograma finalizado por no tener mas links para evaluar\n");
+                }
                 // Imprimo mails
+                System.out.print("Mails detectados:\n");
                 for(String mail : getMails())
                 {
                     System.out.println(mail);
@@ -132,15 +144,15 @@ public class Environment {
     
     public String LinksToString() {
         
-            String str = "";
+            StringBuilder sb = new StringBuilder();
         
             for (Link link : allLinks.values()) {
                 
-                str += "Link: " + link.toString() + "\n";
+                sb.append("Link: ").append(link.toString()).append("\n");
                 
             }
             
-            return str;
+            return sb.toString();
     
     }
 
@@ -157,22 +169,25 @@ public class Environment {
         if(!allLinks.containsKey(link.getLowerURL())) {
             pendingLinks.add(link);
             allLinks.put(link.getLowerURL(), link);
-            // Inicio nuevo thread
-            try {
-                indiceHilosAvailable.acquire();
-                if(!hilosEnEspera.isEmpty())
-                {
-                    Integer threadID = hilosEnEspera.iterator().next();
-                    imprimirDebug("Se reinicia hilo" + threadID);
-                    hilosAvailable.acquire();
-                    hilos[threadID] = new Thread(new redbotThread(threadID));
-                    hilos[threadID].start();
-                    hilosAvailable.release();
-                    hilosEnEspera.remove(threadID);
+            if(!recursosAgotados)
+            {
+                // Inicio nuevo thread
+                try {
+                    indiceHilosAvailable.acquire();
+                    if(!hilosEnEspera.isEmpty())
+                    {
+                        Integer threadID = hilosEnEspera.iterator().next();
+                        imprimirDebug("Se reinicia hilo" + threadID);
+                        hilosAvailable.acquire();
+                        hilos[threadID] = new Thread(new redbotThread(threadID));
+                        hilos[threadID].start();
+                        hilosAvailable.release();
+                        hilosEnEspera.remove(threadID);
+                    }
+                    indiceHilosAvailable.release();
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
                 }
-                indiceHilosAvailable.release();
-            } catch (InterruptedException ex) {
-                Logger.getLogger(Environment.class.getName()).log(Level.SEVERE, null, ex);
             }
         }        
     }
@@ -425,5 +440,15 @@ public class Environment {
             System.out.print("[DEBUG]" + hilo + " " + mensaje + "\n");
         }
     }
+
+    public boolean isRecursosAgotados() {
+        return recursosAgotados;
+    }
+
+    public void setRecursosAgotados(boolean recursosAgotados) {
+        this.recursosAgotados = recursosAgotados;
+    }
+    
+    
     
 }

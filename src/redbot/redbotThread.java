@@ -16,14 +16,28 @@ public class redbotThread implements Runnable{
         this.threadID = threadID;
     }
     
+    private boolean enoughMemory(){
+        Runtime runtime = Runtime.getRuntime();
+        float totalMemory = runtime.totalMemory();
+        float freeMemory = runtime.freeMemory();
+        float porcentajeLibre = freeMemory*100/totalMemory;
+        System.err.print(porcentajeLibre + "\n");
+        if(porcentajeLibre < 30)
+        {
+            System.gc();
+        }
+        return (porcentajeLibre > 20);
+    }
+    
     private int threadID;
     
     @Override
     public void run() {
             Environment.getInstance().imprimirDebug("Inicia hilo: " + threadID);
             HTTPSocket socket = new HTTPSocket();  
+            boolean memoriaInsuficiente = false;
             Environment.getInstance().pedirLinksAvailable();
-            while(!Environment.getInstance().isEmptyPendingLinks())
+            while(!memoriaInsuficiente && !Environment.getInstance().isEmptyPendingLinks())
             {                   
                 Link link = Environment.getInstance().getLink();
                 Environment.getInstance().retornarLinksAvailable();
@@ -37,12 +51,16 @@ public class redbotThread implements Runnable{
                 } catch (NoParseLinkException ex) {
                     Environment.getInstance().imprimirDebug("Página no parseada:" + ex.getMessage());
                 }
+                                
+                if(!enoughMemory()){
+                    Environment.getInstance().setRecursosAgotados(true);
+                }
+                memoriaInsuficiente = Environment.getInstance().isRecursosAgotados();
                 Environment.getInstance().pedirLinksAvailable();
             }
             Environment.getInstance().retornarLinksAvailable();
-            Environment.getInstance().agregarHiloEnEspera(threadID);
             Environment.getInstance().imprimirDebug("Hilo " + threadID + " en pausa");
-        
+            Environment.getInstance().agregarHiloEnEspera(threadID);
     }
             
 }
