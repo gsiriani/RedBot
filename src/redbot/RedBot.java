@@ -143,6 +143,8 @@ public class RedBot {
                         error = true;
                     } else {
                         String urlIngresado = args[i];
+                        if(!urlIngresado.substring(0,7).equals("http://"))
+                            urlIngresado = "http://" + urlIngresado; 
                         try {
                             // Cargo el primer URL
                             URL url = new URL(urlIngresado);

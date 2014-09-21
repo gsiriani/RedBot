@@ -21,7 +21,7 @@ public class redbotThread implements Runnable{
         float totalMemory = runtime.totalMemory();
         float freeMemory = runtime.freeMemory();
         float porcentajeLibre = freeMemory*100/totalMemory;
-        System.err.print(porcentajeLibre + "\n");
+        Environment.getInstance().imprimirDebug(porcentajeLibre + "\n");
         if(porcentajeLibre < 30)
         {
             System.gc();
