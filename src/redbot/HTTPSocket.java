@@ -381,6 +381,10 @@ public class HTTPSocket {
         boolean tieneAbsolutas = extractUrlsAbsolutas(body);
         boolean tieneReativas = extractUrlsRelativas(body);
         extractMails(body);
+        if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
+        {
+            consultarMultilang(body);
+        }
         // Corroboro si es pozo
         currentLink.setPozo(!tieneAbsolutas && !tieneReativas);
         if(currentLink.isPozo() && !Environment.getInstance().getNombreArchivoPozos().isEmpty())
@@ -478,84 +482,35 @@ public class HTTPSocket {
         }       
     }
     
-//    private void consultarMultilang(){
-//        String[] lenguajes = {"en", "es", "ca", "cs", "da", "de", "nl", "el",
-//            "eu", "fi", "fr", "he", "hr", "hu", "it", "ja", "ko", "no", "pl", 
-//            "pt", "ru", "sv", "tr", "uk", "zh"}; 
-//        Link link = currentLink;
-//        int contador = 0;
-//        int pos = 0;
-//        
-//        while(pos < lenguajes.length && contador < 2)
-//        {
-//            String lenguaje = lenguajes[pos];
-//            String solicitudLenguaje = "\nAccept-Language:" + lenguaje;
-//            //TODO: Si path tiene espacios falla
-//            String request = "GET " + link.getPath() + " HTTP/1.0" + 
-//               "\nHost: " + link.getHost() + solicitudLenguaje + "\n\n";
-//
-//            if( !link.getHost().equals(getHost())  // Esto si hay que cambiar socket
-//                || link.getPort() != getPort()) 
-//            {
-//                 host = link.getHost(); // Actualizo los datos
-//                 port = link.getPort();
-//                 socket = new Socket();
-//            }
-//
-//            if (socket.isClosed() || !socket.isConnected()) { // Si hay que conectar
-//                 InetSocketAddress adress = getSocketAdress();
-//                 try {
-//                     socket = new Socket();
-//                     socket.connect(adress, CONNECTION_TIMEOUT);
-//                     System.err.println("Conectado!!!!");
-//                     out = new PrintWriter(socket.getOutputStream(),true);
-//                     in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-//                 } catch (UnknownHostException ex) {
-//                     throw new NoParseLinkException("Host " + getHost() + " desconocido");
-//                 } catch (IOException ex) {
-//                     throw new NoParseLinkException(ex.getMessage());
-//                 }    
-//            }
-//
-//            out.print(request); // Mandamos la request
-//            out.flush();
-//            out.close();
-//            
-//            String response = getResponse(in); 
-//             
-//            String[] lines = response.split("\\r?\\n");
-//
-//            int currentLine = 1;
-//            String key, value;
-//            value = "";
-//            boolean encontro = false;
-//            while(currentLine < lines.length && !lines[currentLine].isEmpty() && !encontro){
-//                int firstColon = lines[currentLine].indexOf(":");
-//                key = lines[currentLine].substring(0, firstColon).trim();
-//                if(key.equals("Content-Language"))
-//                {
-//                    value =  lines[currentLine].substring(firstColon + 1).trim();
-//                    encontro = true;
-//                }
-//                currentLine++;
-//            }
-//            if(value.contains(lenguaje))
-//            {
-//                contador = contador + 1;
-//            }
-//            pos++;
-//        }
-//        if(contador == 2)
-//        {
-//            if(!Environment.getInstance().getNombreArchivoMultilang().isEmpty())
-//            {
-//                Environment.getInstance().pedirMultilangAvailable();
-//                Environment.getInstance().addMultilang(currentLink.getLowerURL());
-//                Environment.getInstance().retornarMultilangAvailable();
-//            }
-//        }
-//    }
-    
+    private void consultarMultilang(String body){
+        String[] lenguajes = {"en", "es", "ca", "cs", "da", "de", "nl", "el",
+            "eu", "fi", "fr", "he", "hr", "hu", "it", "ja", "ko", "no", "pl", 
+            "pt", "ru", "sv", "tr", "uk", "zh"};
+        boolean encontrado = false;
+        // Me fijo en URL
+        int pos = 0;
+        while(pos < lenguajes.length && !encontrado)
+        {
+            encontrado = currentLink.getURL().contains("/" + lenguajes[pos] + "/");
+            encontrado = encontrado || currentLink.getHost().startsWith(lenguajes[pos] + ".");
+            encontrado = encontrado || currentLink.getPath().endsWith("-" + lenguajes[pos]);
+            encontrado = encontrado || currentLink.getPath().contains("-" + lenguajes[pos] + "/");
+            encontrado = encontrado || currentLink.getPath().contains("-" + lenguajes[pos] + ".");
+            pos++;
+        }
+        if(!encontrado)
+        {
+            // Busco en el html
+            String linkLengAlt = " hreflang=\"";
+            encontrado = body.contains(linkLengAlt);
+        }        
+        
+        if(encontrado){
+            Environment.getInstance().pedirMultilangAvailable();
+            Environment.getInstance().addMultilang(currentLink.getHost());
+            Environment.getInstance().retornarMultilangAvailable();
+        }    
+    }
     
     
     public String getHost() {
