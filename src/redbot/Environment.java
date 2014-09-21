@@ -410,9 +410,21 @@ public class Environment {
     }
     
     public void imprimirDebug(String mensaje){
+        
+        String hilo = "[Hilo principal]";
+        
+        for (int i = 0; i < hilos.length; i++) {
+            Thread thread = hilos[i];
+            
+            if (Thread.currentThread() == thread) {
+                hilo = "[Hilo " + i + "]";
+            }
+            
+        }
+        
         if(Debug)
         {
-            System.err.print(mensaje + "\n");
+            System.out.print("[DEBUG]" + hilo + " " + mensaje + "\n");
         }
     }
     
