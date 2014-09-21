@@ -1,0 +1,15 @@
+Ejecute el comando ant desde este directorio. RedBot.jar se compilará
+dentro del directorio 'dist'. Para correr RedBot utilice el comando
+java -jar RedBot.jar [PARAMETROS] URL
+
+    $ ant
+    $ cd dist/
+    $ java -jar RedBot.jar [PARAMETROS] URL
+    
+
+Bruno Garate
+Guillermo Siriani
+Manuela Viola
+
+Grupo 78
+    
