@@ -355,7 +355,10 @@ public class HTTPSocket {
             }
            socket = new Socket();
            
+           Environment.getInstance().NoEsPagina();
+           
            throw new NoParseLinkException("El link '" + currentLink.getURL() +  "' no es una página");
+           
            
         }
 
