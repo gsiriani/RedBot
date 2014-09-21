@@ -50,6 +50,8 @@ public class HTTPSocket {
     private String transferEncoding = "";
     private Link currentLink = null;
     private int noReconnections = 0;
+    private boolean redirection = false;
+    
     
     public HTTPSocket() {
         socket = new Socket();      
@@ -62,6 +64,7 @@ public class HTTPSocket {
     public void queryURL(Link link) {
        // TODO: arreglar pozos
        currentLink = link;
+       
        
        String strProtocol;
        String keepAlive;
@@ -151,6 +154,9 @@ public class HTTPSocket {
         
         transferEncoding = "";
         contentLength = -1;
+        redirection = false;
+        message = "";
+        code = -1;
 
         headers = new HashMap<String,String>();
         
@@ -242,8 +248,18 @@ public class HTTPSocket {
             }
 
             isOK = code == 200;
-
-            message = firstLineItems[2]; // TODO: Capturar mensaje completo
+            
+            if(!isOK)
+            {
+                message = "";
+                for(int i = 2; i < firstLineItems.length; i++)
+                {
+                    message = message + " " + firstLineItems[i]; // TODO: Capturar mensaje completo
+                }
+                Environment.getInstance().imprimirError("Respuesta del servidor: " + code + "" + message);
+                
+               
+            }
 
             /* LEO CABEZALES */
                        
@@ -263,6 +279,23 @@ public class HTTPSocket {
             
             analyzeHeaders();    
                         
+             if(code >= 300 && code <= 399) {
+                    if(headers.containsKey("Location")) {
+                        Link l = obtenerUrlAbsoluta(headers.get("Location"));
+                        if (l != null) {
+                            String newLocation = l.getURL();
+                            redirection = true;
+                            Environment.getInstance().imprimirDebug("Redirección en '" + currentLink.getURL() + "' a '" + newLocation + "'");
+                            Environment.getInstance().addLink(l);
+                        } else {
+                            Environment.getInstance().imprimirDebug("Redirección en '" + currentLink.getURL() + "' mal formada");    
+                        }
+                    } else {
+                        Environment.getInstance().imprimirDebug("Redirección en '" + currentLink.getURL() + "' sin header 'Location'");
+                    }
+             }
+                
+            
             if(protocol == HTTPProtocol.HTTP10){
 
                 StringBuilder sb = new StringBuilder();
@@ -385,7 +418,7 @@ public class HTTPSocket {
             consultarMultilang(body);
         }
         // Corroboro si es pozo
-        currentLink.setPozo(!tieneAbsolutas && !tieneReativas);
+        currentLink.setPozo(!tieneAbsolutas && !tieneReativas && !redirection);
         if(currentLink.isPozo() && !Environment.getInstance().getNombreArchivoPozos().isEmpty())
         {
             Environment.getInstance().pedirPozosAvailable();
@@ -465,7 +498,7 @@ public class HTTPSocket {
                            Environment.getInstance().retornarLinksAvailable();
                         }                
                     } catch (MalformedURLException e) {
-                        throw new NoParseLinkException("URL mal formada: " + u);
+
                     }
                 }
             }
@@ -475,6 +508,70 @@ public class HTTPSocket {
         
         return encontro;
         
+        
+    }
+    
+    private Link obtenerUrlAbsoluta(String body){     
+        boolean encontro = false;
+        Link l;
+        
+        String urlPattern = "((http):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
+        Pattern p = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(body);
+        int i = 0;
+        while (m.find()) {
+            encontro = true;
+            String u = (body.substring(m.start(0),m.end(0)));
+            try {
+                i++;
+                URL url = new URL(u);
+                int ttl = currentLink.getTtl();
+                l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                return l;
+            } catch (MalformedURLException e) {
+
+            }        
+            
+        }
+        
+        if (encontro = false) {
+            String relativeUrlPattern = "href=\\\"(.*?)\\\"";
+            p = Pattern.compile(relativeUrlPattern,Pattern.CASE_INSENSITIVE);
+            m = p.matcher(body);
+
+            while (m.find()) {
+                String encontrado = (body.substring(m.start(0),m.end(0)));
+                if (encontrado.length()> 9){
+                    String u = "";
+                    if (encontrado.substring(6, 9).equals("www")){
+                        u = "http://" + encontrado.substring(6, encontrado.length()-1);
+                    } else if (encontrado.substring(6, 8).equals("//")) {
+                        u = "http:" + encontrado.substring(6, encontrado.length()-1);
+                    } else if (encontrado.substring(6, 7).equals("/")) {
+                        u = "http://" + currentLink.getHost() + encontrado.substring(6, encontrado.length()-1);    
+                    } else if (!encontrado.substring(6, 10).equals("http") && !encontrado.contains("@")){
+                        String currentLinkURL = currentLink.getURL();
+                        String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
+                        u = cortarURL + "/" + encontrado.substring(6, encontrado.length()-1);
+                    }
+
+                    if (!u.isEmpty()) {
+                        encontro = true;
+                        i++;
+                        try {
+                            URL url = new URL(u);
+                            int ttl = currentLink.getTtl();
+                            l = new Link(url.getHost(), url.getFile(), 80, ttl);
+                            return l;
+                        } catch (MalformedURLException e) {
+
+                        }
+                    }
+                }
+            }
+        }
+        
+        return null;
         
     }
     

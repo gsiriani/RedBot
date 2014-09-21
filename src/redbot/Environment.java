@@ -395,6 +395,23 @@ public class Environment {
             System.out.print("[DEBUG]" + hilo + " " + mensaje + "\n");
         }
     }
+    
+    public void imprimirError(String mensaje){
+        
+        String hilo = "[Hilo principal]";
+        
+        for (int i = 0; i < hilos.length; i++) {
+            Thread thread = hilos[i];
+            
+            if (Thread.currentThread() == thread) {
+                hilo = "[Hilo " + i + "]";
+            }
+            
+        }
+        
+        System.err.print("[ADVERTENCIA]" + hilo + " " + mensaje + "\n");
+        
+    }
 
     public boolean isRecursosAgotados() {
         return recursosAgotados;
