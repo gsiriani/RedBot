@@ -467,7 +467,7 @@ public class HTTPSocket {
     }
     
     private void extractMails(String body){
-        String mailPattern = "(\\\\w+)(\\\\.\\\\w+)*@(\\\\w+\\\\.)(\\\\w+)(\\\\.\\\\w+)*";
+        String mailPattern = "[_A-Za-z0-9-]+(\\.[\\+_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})";
         Pattern p = Pattern.compile(mailPattern);
         Matcher m = p.matcher(body);        
         while (m.find()) {
