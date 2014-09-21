@@ -436,8 +436,10 @@ public class HTTPSocket {
                 String u = "";
                 if (encontrado.substring(6, 9).equals("www")){
                     u = "http://" + encontrado.substring(6, encontrado.length()-1);
+                } else if (encontrado.substring(6, 8).equals("//")) {
+                    u = "http:" + encontrado.substring(6, encontrado.length()-1);
                 } else if (encontrado.substring(6, 7).equals("/")) {
-                    u = "http://" + currentLink.getHost() + encontrado.substring(6, encontrado.length()-1);
+                    u = "http://" + currentLink.getHost() + encontrado.substring(6, encontrado.length()-1);    
                 } else if (!encontrado.substring(6, 10).equals("http") && !encontrado.contains("@")){
                     String currentLinkURL = currentLink.getURL();
                     String cortarURL = currentLinkURL.substring(0, currentLinkURL.lastIndexOf("/"));
@@ -485,10 +487,13 @@ public class HTTPSocket {
         boolean encontrado = false;
         // Me fijo en URL
         int pos = 0;
+        String currentLinkHost = currentLink.getHost();
         while(pos < lenguajes.length && !encontrado)
         {
             encontrado = currentLink.getURL().contains("/" + lenguajes[pos] + "/");
             encontrado = encontrado || currentLink.getHost().startsWith(lenguajes[pos] + ".");
+            if (currentLink.getHost().startsWith(lenguajes[pos] + ".")) 
+                currentLinkHost = currentLinkHost.substring(3);
             encontrado = encontrado || currentLink.getPath().endsWith("-" + lenguajes[pos]);
             encontrado = encontrado || currentLink.getPath().contains("-" + lenguajes[pos] + "/");
             encontrado = encontrado || currentLink.getPath().contains("-" + lenguajes[pos] + ".");
@@ -503,7 +508,7 @@ public class HTTPSocket {
         
         if(encontrado){
             Environment.getInstance().pedirMultilangAvailable();
-            Environment.getInstance().addMultilang(currentLink.getHost());
+            Environment.getInstance().addMultilang(currentLinkHost);
             Environment.getInstance().retornarMultilangAvailable();
         }    
     }
