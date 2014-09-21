@@ -112,7 +112,7 @@ public class HTTPSocket {
                
            } catch (LinkFailed e) {
                
-               Environment.getInstance().imprimirDebug("Error: " + e.getMessage() +". Reintentando.");
+               Environment.getInstance().imprimirError("Error: " + e.getMessage() +". Reintentando.");
                retry = true;
                
                try {
