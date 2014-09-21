@@ -133,7 +133,7 @@ public class Environment {
         
             for (Link link : allLinks.values()) {
                 
-                str += link.toString() + "\n";
+                str += "Link: " + link.toString() + "\n";
                 
             }
             
